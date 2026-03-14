@@ -162,7 +162,8 @@ export default function MapView(props: {
   }, [props.visible]);
 
   return (
-    <div ref={containerRef} style={{ width: "100%", height: "100%", minHeight: 0 }}>
+    <div className="orienta-map-frame" style={{ width: "100%", height: "100%", minHeight: 0, position: "relative" }}>
+      <div ref={containerRef} style={{ width: "100%", height: "100%", minHeight: 0 }} />
       {mapkitAvailable === null && (
         <div style={{ position: "absolute", bottom: 8, left: 8, fontSize: 10, opacity: 0.5, pointerEvents: "none", zIndex: 10 }}>
           Checking map provider…

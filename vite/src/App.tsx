@@ -7,6 +7,7 @@ import ToastHost, { ToastItem } from "./components/Toast";
 import LoginScreen from "./components/LoginScreen";
 import ConversationPanel from "./components/ConversationPanel";
 import PaxEntryWrapper from "./components/PaxEntryWrapper";
+import { DeparturesFids, ArrivalsFids } from "./components/FidsPanel";
 
 import type { Gate, Flight, PassengerComputed, PaxExtStatus } from "./services/types";
 import {
@@ -95,6 +96,39 @@ function Dashboard({ session, onLogout }: { session: AdminSession; onLogout(): v
   const [hoverPaxId, setHoverPaxId] = useState<string | null>(null);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [openConvPaxId, setOpenConvPaxId] = useState<string | null>(null);
+
+  // Resizable sidebar width (persisted)
+  const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
+    if (typeof window === "undefined") return 300;
+    const v = localStorage.getItem("orienta_sidebar_width");
+    const n = v ? parseInt(v, 10) : 300;
+    return Number.isFinite(n) && n >= 200 && n <= 500 ? n : 300;
+  });
+  const resizeStartRef = useRef<{ startX: number; startW: number } | null>(null);
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      const r = resizeStartRef.current;
+      if (!r) return;
+      const delta = e.clientX - r.startX;
+      setSidebarWidth(w => {
+        const next = Math.max(200, Math.min(500, r.startW + delta));
+        localStorage.setItem("orienta_sidebar_width", String(next));
+        return next;
+      });
+    };
+    const onUp = () => { resizeStartRef.current = null; document.body.style.cursor = ""; document.body.style.userSelect = ""; };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+    return () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); };
+  }, []);
+
+  const onResizeHandleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    resizeStartRef.current = { startX: e.clientX, startW: sidebarWidth };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  };
 
   // Wide layout: dock chat panel as right-most column (tablet/desktop, ~768px+)
   const [isWide, setIsWide] = useState<boolean>(() => {
@@ -343,7 +377,7 @@ function Dashboard({ session, onLogout }: { session: AdminSession; onLogout(): v
         { id: "P13",  name: "Zara Williams", plan: "Free",  note: "AI agent only" },
       ];
 
-  const mainStyle = { padding: 0, overflow: "hidden" as const, height: "calc(100vh - 56px)" };
+  const mainStyle = { padding: 0, overflow: "hidden" as const, height: "calc(100vh - 56px)", display: "flex" as const, flexDirection: "column" as const };
 
   return (
     <div className="app">
@@ -384,7 +418,21 @@ function Dashboard({ session, onLogout }: { session: AdminSession; onLogout(): v
       />
 
       <div className="main" style={mainStyle}>
-        <div style={{ display: tab === "dashboard" ? "block" : "none", padding: 16, overflow: "auto", height: "100%" }}>
+        <div style={{
+          display: tab === "dashboard" ? "flex" : "none",
+          flex: 1,
+          minHeight: 0,
+          overflow: "hidden",
+          gap: 16,
+          padding: 16,
+          alignItems: "stretch",
+        }}>
+          {/* Left: Departures FIDS — fills left side */}
+          <div style={{ flex: 1, minWidth: 220, maxWidth: 380, height: "100%", minHeight: 400 }}>
+            <DeparturesFids airport={airport} />
+          </div>
+          {/* Center: Transfer Control Dashboard */}
+          <div style={{ flex: 1.5, minWidth: 400, minHeight: 0, overflow: "auto", display: "flex", flexDirection: "column" }}>
           <DashboardTab
             airport={airport}
             passengers={passengersFilteredByGate}
@@ -392,7 +440,6 @@ function Dashboard({ session, onLogout }: { session: AdminSession; onLogout(): v
             riskCounts={riskCounts}
             priorityList={priorityList.filter(p => passengersFilteredByGate.some(x => x.id === p.id))}
             chatHistory={chatHistory}
-            search={search}
             onSelectPax={(id) => { setSelectedPaxId(id); setOpenConvPaxId(id); setMapViewMode("single"); setTab("map"); rtRef.current?.fetchHistory(id); }}
             onSendSms={sendSms}
             onRequestLocation={requestLocation}
@@ -400,16 +447,20 @@ function Dashboard({ session, onLogout }: { session: AdminSession; onLogout(): v
             gatesById={gatesById}
             flightsById={flightsById}
           />
+          </div>
+          {/* Right: Arrivals FIDS — fills right side */}
+          <div style={{ flex: 1, minWidth: 220, maxWidth: 380, height: "100%", minHeight: 400 }}>
+            <ArrivalsFids airport={airport} />
+          </div>
         </div>
 
         <div style={{
-          display: tab === "map" ? "grid" : "none",
-          gridTemplateColumns: dockChat
-            ? (openConvPaxId ? "1fr minmax(200px, 280px) minmax(240px, 340px)" : "1fr minmax(200px, 320px)")
-            : "1fr minmax(180px, 280px)",
-          height: "100%",
+          display: tab === "map" ? "flex" : "none",
+          flex: 1,
           minHeight: 0,
+          overflow: "hidden",
         }}>
+          <div style={{ flex: 1, minWidth: 0, height: "100%", display: "flex", flexDirection: "column" }}>
           <MapView
             gates={gates}
             passengers={mapPassengers}
@@ -428,8 +479,23 @@ function Dashboard({ session, onLogout }: { session: AdminSession; onLogout(): v
             visible={tab === "map"}
             centerOverride={airport === "SFO" ? { lat: 37.6155, lng: -122.3866 } : undefined}
           />
-          {/* ── Sidebar: fills height with flex layout ── */}
-          <div className="sidebar" style={{ overflowY: "auto", display: "flex", flexDirection: "column", height: "100%" }}>
+          </div>
+          {/* ── Resize handle ── */}
+          <div
+            onMouseDown={onResizeHandleMouseDown}
+            style={{
+              width: 6,
+              flexShrink: 0,
+              cursor: "col-resize",
+              background: "rgba(255,255,255,0.06)",
+              transition: "background 0.15s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(10,132,255,0.3)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; }}
+            title="Drag to resize"
+          />
+          {/* ── Sidebar: resizable width ── */}
+          <div className="sidebar" style={{ width: sidebarWidth, flexShrink: 0, overflowY: "auto", display: "flex", flexDirection: "column", height: "100%" }}>
             {/* Passenger detail or placeholder */}
             {selectedPax ? (
               <PassengerCard
@@ -502,7 +568,7 @@ function Dashboard({ session, onLogout }: { session: AdminSession; onLogout(): v
 
           {/* ── Right-most: docked chat panel (desktop) ── */}
           {dockChat && openConvPaxId && (
-            <div style={{ overflow: "hidden", height: "100%", minHeight: 0, padding: 10 }}>
+            <div style={{ width: 320, flexShrink: 0, overflow: "hidden", height: "100%", minHeight: 0, padding: 10 }}>
               <ConversationPanel
                   mode="docked"
                   passengerId={openConvPaxId}
@@ -575,132 +641,140 @@ function DashboardTab({
   const sorted = [...displayed].sort((a, b) => (extStatusOrder[a.extStatus] ?? 9) - (extStatusOrder[b.extStatus] ?? 9));
 
   const airportTitle = airport === "PEK"
-    ? "🔁 Transfer Control Dashboard — PEK T3E · International → International"
-    : "🔁 Transfer Control Dashboard — SFO · International → Domestic";
+    ? "Transfer Control Dashboard — PEK T3E · International → International"
+    : "Transfer Control Dashboard — SFO · International → Domestic";
+
+  const badgeItems = [
+    { key: "green", label: "On Track", cls: "green" },
+    { key: "yellow", label: "Tight", cls: "yellow" },
+    { key: "red", label: "At Risk", cls: "red" },
+    { key: "lost", label: "Lost", cls: "lost" },
+    { key: "offline", label: "Offline", cls: "offline" },
+    { key: "missed", label: "Missed", cls: "missed" },
+  ] as const;
 
   return (
-    <div style={{ maxWidth: 1280, margin: "0 auto" }}>
-      <div className="card" style={{ marginBottom: 16 }}>
-        <h3 style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span>{airportTitle}</span>
-          <span className="small">{passengers.length} passengers</span>
-        </h3>
-        <RiskBadges counts={riskCounts} />
+    <div className="transfer-control-dashboard">
+      {/* Header */}
+      <div className="tcd-header">
+        <h2>
+          <span>🔁 {airportTitle}</span>
+          <span className="tcd-count">{passengers.length} passengers</span>
+        </h2>
+        <div className="tcd-badges">
+          {badgeItems.map(({ key, label, cls }) => (
+            <div key={key} className={`tcd-badge ${cls}`}>
+              <span className="tcd-badge-num">{(riskCounts as Record<string, number>)[key] || 0}</span>
+              <span>{label}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
+      {/* Requires Immediate Action */}
       {priorityList.length > 0 && (
-        <div className="card" style={{ marginBottom: 16, borderLeft: "3px solid #ff3b30" }}>
-          <h3 style={{ fontSize: 13, color: "#ff3b30" }}>🚨 Requires Immediate Action</h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {priorityList.map(p => {
-              const gate = gatesById.get(p.gateId);
-              const flight = flightsById.get(p.flightId);
-              return (
-                <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 8px", background: "rgba(255,59,48,0.08)", borderRadius: 8 }}>
-                  <span style={{ width: 10, height: 10, borderRadius: "50%", background: statusBadge(p.extStatus), flexShrink: 0 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ fontWeight: 700, fontSize: 13 }}>{p.name}</span>
-                    <span className="small" style={{ marginLeft: 6 }}>({p.id}) · {extStatusLabel(p.extStatus as PaxExtStatus)} · Gate {gate?.name || "?"} · {flight?.callsign || p.flightId}</span>
-                    {p.transfer && <div className="small" style={{ opacity: 0.7 }}>{p.transfer.inboundFlight} {p.transfer.inboundFrom} → {p.flightId} {p.transfer.outboundTo}</div>}
-                  </div>
-                  <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-                    <button className="btn" style={{ fontSize: 11, padding: "3px 8px" }} onClick={() => onOpenConversation(p.id)}>💬</button>
-                    {p.extStatus === "lost" && <button className="btn" style={{ fontSize: 11, padding: "3px 8px" }} onClick={() => onRequestLocation(p.id)}>📍</button>}
-                    <button className="btn primary" style={{ fontSize: 11, padding: "3px 8px" }} onClick={() => onSelectPax(p.id)}>View</button>
-                  </div>
+        <div className="tcd-urgent">
+          <h3>⚠️ Requires Immediate Action</h3>
+          {priorityList.map(p => {
+            const gate = gatesById.get(p.gateId);
+            const flight = flightsById.get(p.flightId);
+            const rowCls = p.extStatus === "red" ? "at-risk" : p.extStatus === "lost" ? "lost" : "missed";
+            return (
+              <div key={p.id} className={`tcd-urgent-row ${rowCls}`}>
+                <span className="tcd-urgent-dot" style={{ background: statusBadge(p.extStatus) }} />
+                <div className="tcd-urgent-info">
+                  <div className="tcd-urgent-name">{p.name} <span style={{ fontWeight: 500, color: "var(--tcd-text-muted)" }}>({p.id})</span></div>
+                  <div className="tcd-urgent-meta">{extStatusLabel(p.extStatus as PaxExtStatus)} · Gate {gate?.name || "?"} · {flight?.callsign || p.flightId}</div>
+                  {p.transfer && <div className="tcd-urgent-route">{p.transfer.inboundFlight} {p.transfer.inboundFrom} → {p.flightId} {p.transfer.outboundTo}</div>}
                 </div>
-              );
-            })}
-          </div>
+                <div className="tcd-urgent-actions">
+                  <button className="tcd-action-btn" onClick={() => onOpenConversation(p.id)} title="Chat">💬</button>
+                  {p.extStatus === "lost" && <button className="tcd-action-btn" onClick={() => onRequestLocation(p.id)} title="Request location">📍</button>}
+                  <button className="tcd-action-btn primary" onClick={() => onSelectPax(p.id)}>View</button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
-      <div className="card">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-          <h3 style={{ margin: 0 }}>All Passengers</h3>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+      {/* All Passengers */}
+      <div className="tcd-all">
+        <div className="tcd-all-header">
+          <h3>All Passengers</h3>
+          <div className="tcd-filter-group">
             {["all", "lost", "urgent", "missed", "offline", "premium"].map(f => (
-              <button key={f} className={"btn" + (filter === f ? " primary" : "")} style={{ fontSize: 11, padding: "3px 8px" }}
+              <button key={f} className={`tcd-filter-btn ${filter === f ? "active" : ""}`}
                 onClick={() => setFilter(f)}>{f.charAt(0).toUpperCase() + f.slice(1)}</button>
             ))}
           </div>
         </div>
 
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-          <thead>
-            <tr style={{ opacity: 0.5, textAlign: "left" }}>
-              <th style={{ padding: "4px 6px" }}>Status</th>
-              <th style={{ padding: "4px 6px" }}>ID</th>
-              <th style={{ padding: "4px 6px" }}>Name</th>
-              <th style={{ padding: "4px 6px" }}>Plan</th>
-              <th style={{ padding: "4px 6px" }}>Inbound</th>
-              <th style={{ padding: "4px 6px" }}>Outbound</th>
-              <th style={{ padding: "4px 6px" }}>Gate</th>
-              <th style={{ padding: "4px 6px" }}>ETA</th>
-              <th style={{ padding: "4px 6px" }}>Online</th>
-              <th style={{ padding: "4px 6px" }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map(p => {
-              const gate = gatesById.get(p.gateId);
-              const flight = flightsById.get(p.flightId);
-              const isOnline = !!presence[p.id];
-              const lastChat = (chatHistory[p.id] || []).slice(-1)[0];
-              return (
-                <tr key={p.id} style={{ borderTop: "1px solid rgba(255,255,255,0.05)", cursor: "pointer" }}
-                  onClick={() => onSelectPax(p.id)}>
-                  <td style={{ padding: "5px 6px" }}>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: statusBadge(p.extStatus) }} />
-                      <span style={{ fontSize: 10 }}>{extStatusLabel(p.extStatus as PaxExtStatus)}</span>
-                    </span>
-                  </td>
-                  <td style={{ padding: "5px 6px", fontWeight: 700 }}>{p.id}</td>
-                  <td style={{ padding: "5px 6px" }}>
-                    {p.name}{p.needsWheelchair ? " ♿" : ""}{p.plan === "premium" ? " 💎" : ""}
-                  </td>
-                  <td style={{ padding: "5px 6px" }}>
-                    <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 4, background: p.plan === "premium" ? "#0a84ff22" : "#ffffff11", color: p.plan === "premium" ? "#0a84ff" : "#fff" }}>
-                      {p.plan === "premium" ? "Premium" : "Free"}
-                    </span>
-                  </td>
-                  <td style={{ padding: "5px 6px" }}>
-                    <div>{p.transfer.inboundFlight}</div>
-                    <div style={{ opacity: 0.5, fontSize: 10 }}>{p.transfer.inboundFrom}</div>
-                  </td>
-                  <td style={{ padding: "5px 6px" }}>
-                    <div>{flight?.callsign || p.flightId}</div>
-                    <div style={{ opacity: 0.5, fontSize: 10 }}>{p.transfer.outboundTo}</div>
-                  </td>
-                  <td style={{ padding: "5px 6px" }}>{gate?.name || p.gateId}</td>
-                  <td style={{ padding: "5px 6px" }}>{p.etaMinutes !== null ? `${p.etaMinutes}m` : "—"}</td>
-                  <td style={{ padding: "5px 6px" }}>
-                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: isOnline ? "#34c759" : "#636366", display: "inline-block" }} />
-                  </td>
-                  <td style={{ padding: "5px 6px" }} onClick={e => e.stopPropagation()}>
-                    <div style={{ display: "flex", gap: 4 }}>
-                      <button className="btn" style={{ fontSize: 10, padding: "2px 6px" }}
-                        onClick={() => onOpenConversation(p.id)}
-                        title={lastChat ? `Last: ${lastChat.body.slice(0, 30)}` : "Open conversation"}>
-                        💬{(chatHistory[p.id] || []).length > 0 ? ` ${(chatHistory[p.id] || []).length}` : ""}
-                      </button>
-                      {p.extStatus === "lost" && (
-                        <button className="btn" style={{ fontSize: 10, padding: "2px 6px" }} onClick={() => onRequestLocation(p.id)}>📍</button>
-                      )}
-                      {(p.extStatus === "offline" || p.extStatus === "lost") && (
-                        <button className="btn" style={{ fontSize: 10, padding: "2px 6px" }}
-                          onClick={() => onSendSms(p.id, `Orienta: Your flight ${p.flightId} is at Gate ${gate?.name}. Please proceed immediately.`)}>
-                          📨
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <div className="tcd-table-wrap">
+          <table className="tcd-table">
+            <thead>
+              <tr>
+                <th>Status</th>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Plan</th>
+                <th>Inbound</th>
+                <th>Outbound</th>
+                <th>Gate</th>
+                <th>ETA</th>
+                <th>Online</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map(p => {
+                const gate = gatesById.get(p.gateId);
+                const flight = flightsById.get(p.flightId);
+                const isOnline = !!presence[p.id];
+                const statusCls = (p.extStatus as string) in { green: 1, yellow: 1, red: 1, lost: 1, offline: 1, missed: 1, gray: 1 } ? p.extStatus : "gray";
+                return (
+                  <tr key={p.id} onClick={() => onSelectPax(p.id)}>
+                    <td>
+                      <span className="tcd-status-cell">
+                        <span className="tcd-status-dot" style={{ background: statusBadge(p.extStatus) }} />
+                        <span className={`tcd-status-label ${statusCls}`}>{extStatusLabel(p.extStatus as PaxExtStatus)}</span>
+                      </span>
+                    </td>
+                    <td className="tcd-id-cell">{p.id}</td>
+                    <td>{p.name}{p.needsWheelchair ? " ♿" : ""}{p.plan === "premium" ? " 💎" : ""}</td>
+                    <td>
+                      <span className={`tcd-plan-tag ${p.plan === "premium" ? "premium" : "free"}`}>
+                        {p.plan === "premium" ? "Premium" : "Free"}
+                      </span>
+                    </td>
+                    <td>
+                      <div>{p.transfer.inboundFlight}</div>
+                      <div style={{ fontSize: 11, color: "var(--tcd-text-muted)" }}>{p.transfer.inboundFrom}</div>
+                    </td>
+                    <td>
+                      <div>{flight?.callsign || p.flightId}</div>
+                      <div style={{ fontSize: 11, color: "var(--tcd-text-muted)" }}>{p.transfer.outboundTo}</div>
+                    </td>
+                    <td>{gate?.name || p.gateId}</td>
+                    <td>{p.etaMinutes !== null ? `${p.etaMinutes}m` : "—"}</td>
+                    <td>
+                      <span className={`tcd-online-dot ${isOnline ? "on" : "off"}`} />
+                    </td>
+                    <td onClick={e => e.stopPropagation()}>
+                      <div className="tcd-row-actions">
+                        <button className="tcd-action-btn" onClick={() => onOpenConversation(p.id)} title="Chat">💬</button>
+                        {p.extStatus === "lost" && <button className="tcd-action-btn" onClick={() => onRequestLocation(p.id)}>📍</button>}
+                        {(p.extStatus === "offline" || p.extStatus === "lost") && (
+                          <button className="tcd-action-btn" onClick={() => onSendSms(p.id, `Orienta: Your flight ${p.flightId} is at Gate ${gate?.name}. Please proceed immediately.`)}>📨</button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

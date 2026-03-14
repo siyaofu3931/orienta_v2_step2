@@ -28,15 +28,16 @@ function statusColor(p: PassengerComputed): string {
 
 function gateIcon(label: string) {
   return L.divIcon({
-    className: "",
-    html: `<div style="min-width:24px;height:20px;border-radius:5px;
-      background:rgba(10,132,255,0.9);color:white;
+    className: "orienta-gate-marker",
+    html: `<div style="min-width:28px;height:24px;border-radius:6px;
+      background:linear-gradient(135deg,#0a84ff 0%,#0051d5 100%);color:white;
       display:flex;align-items:center;justify-content:center;
-      font-weight:800;font-size:10px;padding:0 4px;
-      box-shadow:0 2px 6px rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.5);
+      font-weight:800;font-size:11px;padding:0 5px;
+      box-shadow:0 0 12px rgba(10,132,255,0.6),0 2px 8px rgba(0,0,0,0.4);
+      border:2px solid rgba(255,255,255,0.9);
       white-space:nowrap;">${label}</div>`,
-    iconSize: [28, 20],
-    iconAnchor: [14, 10],
+    iconSize: [32, 24],
+    iconAnchor: [16, 12],
   });
 }
 
@@ -62,14 +63,15 @@ function paxIcon(p: PassengerComputed) {
     ? `<div style="position:absolute;bottom:-6px;left:-6px;font-size:10px;line-height:1;">♿</div>` : "";
 
   return L.divIcon({
-    className: "",
-    html: `<div style="position:relative;width:14px;height:14px;">
-      <div style="width:14px;height:14px;border-radius:50%;background:${color};
-        border:2px solid rgba(255,255,255,0.9);box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>
+    className: "orienta-pax-marker",
+    html: `<div style="position:relative;width:16px;height:16px;">
+      <div style="width:16px;height:16px;border-radius:50%;background:${color};
+        border:2px solid rgba(255,255,255,1);
+        box-shadow:0 0 10px ${color}99,0 2px 8px rgba(0,0,0,0.5);"></div>
       ${badge}${premBadge}${wcBadge}
     </div>`,
-    iconSize: [14, 14],
-    iconAnchor: [7, 7],
+    iconSize: [16, 16],
+    iconAnchor: [8, 8],
   });
 }
 
@@ -98,11 +100,11 @@ export default class LeafletAdapter {
     inst.map = L.map(container, {
       zoomControl: true,
       preferCanvas: true,
+      attributionControl: false,
     }).setView(c0, z0);
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
-      attribution: "© OpenStreetMap",
     }).addTo(inst.map);
 
     container.style.cursor = "grab";
@@ -200,7 +202,7 @@ export default class LeafletAdapter {
     for (const t of tracks) {
       const pl = L.polyline(
         t.points.map(pt => [pt.lat, pt.lng] as [number, number]),
-        { weight: 3, opacity: 0.7, color: t.color, dashArray: "5 7" }
+        { weight: 4, opacity: 0.9, color: t.color, dashArray: "6 8" }
       ).addTo(this.map);
       this.tracks.push(pl);
     }

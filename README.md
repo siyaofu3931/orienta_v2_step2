@@ -117,6 +117,12 @@ Admin Dashboard: `http://localhost:5174/` (login: admin/admin)
 
 ## Dashboard Layout
 
+### FIDS Panels (Flight Information Display)
+- **Left**: International departures from PEK T3E (or SFO)
+- **Right**: International arrivals at PEK T3E (or SFO)
+- Dark blue airport-board style, 1-hour refresh to save API traffic
+- **Data source**: Mock data by default. For real data, set `VITE_AVIATIONSTACK_KEY` in `.env` (free tier: 100 req/month at [aviationstack.com](https://aviationstack.com/signup/free))
+
 ### Tab 1: Transfer Control Dashboard
 - **Risk aggregation**: Green / Yellow / Red / Missed / Offline / Lost
 - **Priority list**: Lost / Urgent / Missed (auto-sorted)

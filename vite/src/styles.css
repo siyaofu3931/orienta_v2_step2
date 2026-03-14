@@ -554,6 +554,375 @@ a:hover{ text-decoration:underline; }
   box-shadow: 0 0 0 4px rgba(10,132,255,0.12);
 }
 
+/* ─── Transfer Control Dashboard (center region) ─── */
+.transfer-control-dashboard {
+  --tcd-bg: #f0f2f5;
+  --tcd-card: #ffffff;
+  --tcd-text: #1a1a1a;
+  --tcd-text-muted: #5c5c5c;
+  --tcd-border: rgba(0,0,0,0.08);
+  --tcd-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  --tcd-radius: 12px;
+  background: var(--tcd-bg);
+  border-radius: var(--tcd-radius);
+  padding: 16px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.transfer-control-dashboard .tcd-header {
+  background: var(--tcd-card);
+  border: 1px solid var(--tcd-border);
+  border-radius: var(--tcd-radius);
+  padding: 16px 18px;
+  box-shadow: var(--tcd-shadow);
+}
+
+.transfer-control-dashboard .tcd-header h2 {
+  margin: 0 0 12px 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--tcd-text);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.transfer-control-dashboard .tcd-header .tcd-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tcd-text-muted);
+}
+
+/* Status badges: vivid, high contrast */
+.transfer-control-dashboard .tcd-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.transfer-control-dashboard .tcd-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.transfer-control-dashboard .tcd-badge .tcd-badge-num {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.transfer-control-dashboard .tcd-badge.green { background: #e8f8ed; color: #1a7f37; border-color: rgba(26,127,55,0.2); }
+.transfer-control-dashboard .tcd-badge.yellow { background: #fff8e6; color: #b8860b; border-color: rgba(184,134,11,0.25); }
+.transfer-control-dashboard .tcd-badge.red { background: #ffebeb; color: #c41e1e; border-color: rgba(196,30,30,0.2); }
+.transfer-control-dashboard .tcd-badge.lost { background: #fff4e6; color: #d35400; border-color: rgba(211,84,0,0.25); }
+.transfer-control-dashboard .tcd-badge.offline { background: #f0f0f2; color: #4a4a4f; border-color: rgba(0,0,0,0.06); }
+.transfer-control-dashboard .tcd-badge.missed { background: #f5f5f7; color: #6b6b70; border-color: rgba(0,0,0,0.06); }
+
+/* Requires Immediate Action panel */
+.transfer-control-dashboard .tcd-urgent {
+  background: var(--tcd-card);
+  border: 1px solid var(--tcd-border);
+  border-left: 4px solid #e63946;
+  border-radius: var(--tcd-radius);
+  padding: 14px 18px;
+  box-shadow: var(--tcd-shadow);
+}
+
+.transfer-control-dashboard .tcd-urgent h3 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #c41e1e;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.transfer-control-dashboard .tcd-urgent-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  transition: background 0.15s;
+}
+
+.transfer-control-dashboard .tcd-urgent-row:last-child { margin-bottom: 0; }
+
+.transfer-control-dashboard .tcd-urgent-row.at-risk {
+  background: #fff0f0;
+  border: 1px solid rgba(196,30,30,0.12);
+}
+
+.transfer-control-dashboard .tcd-urgent-row.lost {
+  background: #fff8f0;
+  border: 1px solid rgba(211,84,0,0.1);
+}
+
+.transfer-control-dashboard .tcd-urgent-row.missed {
+  background: #f8f8fa;
+  border: 1px solid rgba(0,0,0,0.05);
+}
+
+.transfer-control-dashboard .tcd-urgent-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.transfer-control-dashboard .tcd-urgent-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.transfer-control-dashboard .tcd-urgent-name {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--tcd-text);
+}
+
+.transfer-control-dashboard .tcd-urgent-meta {
+  font-size: 12px;
+  color: var(--tcd-text-muted);
+  margin-top: 2px;
+}
+
+.transfer-control-dashboard .tcd-urgent-route {
+  font-size: 11px;
+  color: var(--tcd-text-muted);
+  opacity: 0.85;
+  margin-top: 2px;
+}
+
+.transfer-control-dashboard .tcd-urgent-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.transfer-control-dashboard .tcd-action-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--tcd-border);
+  background: #f8f8fa;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.transfer-control-dashboard .tcd-action-btn:hover {
+  background: #eef0f2;
+  border-color: rgba(0,0,0,0.12);
+}
+
+.transfer-control-dashboard .tcd-action-btn.primary {
+  background: #0a84ff;
+  border-color: #0a84ff;
+  color: white;
+  width: auto;
+  padding: 0 14px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.transfer-control-dashboard .tcd-action-btn.primary:hover {
+  background: #0077ed;
+  border-color: #0077ed;
+}
+
+/* All Passengers panel */
+.transfer-control-dashboard .tcd-all {
+  background: #f5f7f9;
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: var(--tcd-radius);
+  padding: 16px 18px;
+  box-shadow: var(--tcd-shadow);
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.transfer-control-dashboard .tcd-all-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.transfer-control-dashboard .tcd-all-header h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--tcd-text);
+}
+
+.transfer-control-dashboard .tcd-filter-group {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.transfer-control-dashboard .tcd-filter-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--tcd-border);
+  background: var(--tcd-card);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tcd-text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.transfer-control-dashboard .tcd-filter-btn:hover {
+  background: #f5f5f7;
+  color: var(--tcd-text);
+}
+
+.transfer-control-dashboard .tcd-filter-btn.active {
+  background: #e8f4ff;
+  border-color: #0a84ff;
+  color: #0a84ff;
+}
+
+.transfer-control-dashboard .tcd-table-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--tcd-border);
+  border-radius: 8px;
+}
+
+.transfer-control-dashboard .tcd-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.transfer-control-dashboard .tcd-table th {
+  text-align: left;
+  padding: 10px 12px;
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--tcd-text-muted);
+  background: #e8ebef;
+  border-bottom: 2px solid rgba(0,0,0,0.1);
+}
+
+.transfer-control-dashboard .tcd-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(0,0,0,0.04);
+  color: var(--tcd-text);
+}
+
+.transfer-control-dashboard .tcd-table tbody tr {
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.transfer-control-dashboard .tcd-table tbody tr:hover {
+  background: #eef0f3;
+}
+
+.transfer-control-dashboard .tcd-table tbody tr:nth-child(even) {
+  background: rgba(0,0,0,0.03);
+}
+
+.transfer-control-dashboard .tcd-table tbody tr:nth-child(even):hover {
+  background: #e8eaed;
+}
+
+.transfer-control-dashboard .tcd-status-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.transfer-control-dashboard .tcd-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.transfer-control-dashboard .tcd-status-label {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.transfer-control-dashboard .tcd-status-label.green { color: #1a7f37; }
+.transfer-control-dashboard .tcd-status-label.yellow { color: #b8860b; }
+.transfer-control-dashboard .tcd-status-label.red { color: #c41e1e; }
+.transfer-control-dashboard .tcd-status-label.lost { color: #d35400; }
+.transfer-control-dashboard .tcd-status-label.offline { color: #4a4a4f; }
+.transfer-control-dashboard .tcd-status-label.missed { color: #6b6b70; }
+.transfer-control-dashboard .tcd-status-label.gray { color: #6b6b70; }
+
+.transfer-control-dashboard .tcd-id-cell {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--tcd-text);
+}
+
+.transfer-control-dashboard .tcd-plan-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.transfer-control-dashboard .tcd-plan-tag.premium {
+  background: #e8f4ff;
+  color: #0a84ff;
+}
+
+.transfer-control-dashboard .tcd-plan-tag.free {
+  background: #f0f0f2;
+  color: var(--tcd-text-muted);
+}
+
+.transfer-control-dashboard .tcd-online-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.transfer-control-dashboard .tcd-online-dot.on { background: #1a7f37; }
+.transfer-control-dashboard .tcd-online-dot.off { background: #9ca3af; }
+
+.transfer-control-dashboard .tcd-row-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.transfer-control-dashboard .tcd-row-actions .tcd-action-btn {
+  width: 28px;
+  height: 28px;
+  font-size: 12px;
+}
+
 @media (max-width: 980px){
   .main{ }
   .sidebar{
@@ -567,4 +936,32 @@ a:hover{ text-decoration:underline; }
     background: rgba(245,245,247,0.85);
     box-shadow: 0 18px 50px rgba(0,0,0,0.16);
   }
+}
+
+/* ─── OSM Map Dark Theme (Klang Valley–style) ─── */
+.orienta-map-frame {
+  border: 3px solid #1a1a1a;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #0a0a0a;
+}
+.orienta-map-frame .leaflet-container {
+  background: #0a0a0a;
+}
+/* Dark base: black-ish background, desaturated map, high contrast */
+.orienta-map-frame .leaflet-tile-pane {
+  filter: brightness(0.35) saturate(0.3) contrast(1.25);
+}
+/* Zoom controls: light for dark background */
+.orienta-map-frame .leaflet-control-zoom {
+  border: none !important;
+}
+.orienta-map-frame .leaflet-control-zoom a {
+  background: #1f1f1f !important;
+  color: #e0e0e0 !important;
+  border: 1px solid #333 !important;
+}
+.orienta-map-frame .leaflet-control-zoom a:hover {
+  background: #2a2a2a !important;
+  color: #fff !important;
 }
