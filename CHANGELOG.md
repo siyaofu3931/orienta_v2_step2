@@ -1,5 +1,17 @@
 # Changelog
 
+## [2025-03-14] - Adaptive Panels & Chat Default Hidden
+
+### Changed
+- **Adaptive panel widths**: Sidebar and chat panels now use flexible widths (minmax) instead of fixed 380px/420px. On tablet/iPad, panels shrink to give more space to the map.
+- **Chat panel hidden by default**: The rightmost chat panel is no longer shown until the user clicks a passenger (Priority List, Dashboard, or Pax Simulator "Open"). Clicking "Pax" or "Urgent" in the top bar closes the chat and returns to map-only view.
+- **Docked layout threshold**: Lowered from 1180px to 768px so iPad landscape can use the docked layout.
+
+### Fixed
+- Panels taking excessive screen space on iPad; layout now adapts to available width.
+
+---
+
 ## [2025-03-14] - Dashboard & Map UX Improvements
 
 ### Added

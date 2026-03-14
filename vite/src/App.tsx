@@ -96,13 +96,13 @@ function Dashboard({ session, onLogout }: { session: AdminSession; onLogout(): v
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [openConvPaxId, setOpenConvPaxId] = useState<string | null>(null);
 
-  // Wide layout: dock chat panel as right-most column (desktop)
+  // Wide layout: dock chat panel as right-most column (tablet/desktop, ~768px+)
   const [isWide, setIsWide] = useState<boolean>(() => {
     if (typeof window === "undefined") return true;
-    return window.innerWidth >= 1180;
+    return window.innerWidth >= 768;
   });
   useEffect(() => {
-    const onResize = () => setIsWide(window.innerWidth >= 1180);
+    const onResize = () => setIsWide(window.innerWidth >= 768);
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
@@ -361,8 +361,8 @@ function Dashboard({ session, onLogout }: { session: AdminSession; onLogout(): v
         dataSource={airport === "PEK" ? "T3E/I→I" : "SFO/I→D"}
         userLabel={`${session.user.displayName} · ${session.user.org}`}
         onLogout={onLogout}
-        onPaxClick={() => { setMapViewMode("all"); setSelectedPaxId(null); setTab("map"); }}
-        onUrgentClick={() => { setMapViewMode("urgent"); setSelectedPaxId(null); setTab("map"); }}
+        onPaxClick={() => { setMapViewMode("all"); setSelectedPaxId(null); setOpenConvPaxId(null); setTab("map"); }}
+        onUrgentClick={() => { setMapViewMode("urgent"); setSelectedPaxId(null); setOpenConvPaxId(null); setTab("map"); }}
         mapViewFilter={mapViewMode}
         extraRight={
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -393,7 +393,7 @@ function Dashboard({ session, onLogout }: { session: AdminSession; onLogout(): v
             priorityList={priorityList.filter(p => passengersFilteredByGate.some(x => x.id === p.id))}
             chatHistory={chatHistory}
             search={search}
-            onSelectPax={(id) => { setSelectedPaxId(id); setMapViewMode("single"); setTab("map"); }}
+            onSelectPax={(id) => { setSelectedPaxId(id); setOpenConvPaxId(id); setMapViewMode("single"); setTab("map"); rtRef.current?.fetchHistory(id); }}
             onSendSms={sendSms}
             onRequestLocation={requestLocation}
             onOpenConversation={openConversation}
@@ -402,7 +402,14 @@ function Dashboard({ session, onLogout }: { session: AdminSession; onLogout(): v
           />
         </div>
 
-        <div style={{ display: tab === "map" ? "grid" : "none", gridTemplateColumns: dockChat ? "1fr 380px 420px" : "1fr 380px", height: "100%", minHeight: 0 }}>
+        <div style={{
+          display: tab === "map" ? "grid" : "none",
+          gridTemplateColumns: dockChat
+            ? (openConvPaxId ? "1fr minmax(200px, 280px) minmax(240px, 340px)" : "1fr minmax(200px, 320px)")
+            : "1fr minmax(180px, 280px)",
+          height: "100%",
+          minHeight: 0,
+        }}>
           <MapView
             gates={gates}
             passengers={mapPassengers}
@@ -447,7 +454,7 @@ function Dashboard({ session, onLogout }: { session: AdminSession; onLogout(): v
               <h3 style={{ fontSize: 13 }}>🔴 Priority List</h3>
               {priorityList.length === 0 && <div className="small" style={{ opacity: 0.5 }}>No urgent passengers.</div>}
               {priorityList.map(p => (
-                <button key={p.id} className="btn" onClick={() => { setSelectedPaxId(p.id); setMapViewMode("single"); setTab("map"); }}
+                <button key={p.id} className="btn" onClick={() => { setSelectedPaxId(p.id); setOpenConvPaxId(p.id); setMapViewMode("single"); setTab("map"); rtRef.current?.fetchHistory(p.id); }}
                   style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, width: "100%" }}>
                   <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
                     <span style={{ width: 8, height: 8, borderRadius: "50%", background: statusBadge(p.extStatus), display: "inline-block" }} />
@@ -494,10 +501,9 @@ function Dashboard({ session, onLogout }: { session: AdminSession; onLogout(): v
           </div>
 
           {/* ── Right-most: docked chat panel (desktop) ── */}
-          {dockChat && (
+          {dockChat && openConvPaxId && (
             <div style={{ overflow: "hidden", height: "100%", minHeight: 0, padding: 10 }}>
-              {openConvPaxId ? (
-                <ConversationPanel
+              <ConversationPanel
                   mode="docked"
                   passengerId={openConvPaxId}
                   passenger={passengers.find(p => p.id === openConvPaxId) || null}
@@ -508,14 +514,6 @@ function Dashboard({ session, onLogout }: { session: AdminSession; onLogout(): v
                   isOnline={!!presence[openConvPaxId]}
                   isPremium={passengers.find(p => p.id === openConvPaxId)?.plan === "premium"}
                 />
-              ) : (
-                <div className="card" style={{ height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", gap: 8 }}>
-                  <div style={{ fontWeight: 800 }}>💬 Chat</div>
-                  <div className="small" style={{ textAlign: "center", opacity: 0.7 }}>
-                    Click “Open Chat (Operator)” on a passenger card to dock the conversation here.
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </div>
