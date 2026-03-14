@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Orienta · Flight Result</title>
+
+  <!-- Leaflet (OSM) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+  <!-- Apple MapKit JS -->
+  <script src="https://cdn.apple-mapkit.com/mk/5.x.x/mapkit.js" crossorigin="anonymous" defer></script>
+
+  <style>
+    :root {
+      --bg: #0b0b0c;
+      --card: #151517;
+      --card2: #1c1c1e;
+      --text: rgba(255,255,255,0.92);
+      --muted: rgba(255,255,255,0.65);
+      --line: rgba(255,255,255,0.10);
+      --blue: #0a84ff;
+      --green: #34c759;
+      --yellow: #ffcc00;
+      --red: #ff3b30;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;}
+    .wrap{max-width:980px;margin:0 auto;padding:14px;}
+    .top{
+      display:flex;align-items:center;justify-content:space-between;gap:12px;
+      margin:8px 0 12px;
+    }
+    .title{font-size:18px;font-weight:800;}
+    .sub{font-size:12px;color:var(--muted);margin-top:2px;}
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.08);font-size:12px;color:var(--muted)}
+
+    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;}
+    .grid{display:grid;grid-template-columns:1fr;gap:12px;}
+    @media(min-width:980px){.grid{grid-template-columns:1fr 1fr;}}
+
+    .seg{display:inline-flex;gap:6px;background:rgba(255,255,255,0.06);padding:6px;border-radius:999px;border:1px solid var(--line)}
+    .seg button{border:0;background:transparent;color:var(--muted);padding:8px 12px;border-radius:999px;cursor:pointer;font-weight:700;font-size:12px}
+    .seg button.active{background:rgba(10,132,255,0.20);color:#fff}
+
+    .kv{display:grid;grid-template-columns:120px 1fr;gap:8px 10px;font-size:13px;margin-top:10px}
+    .k{color:var(--muted)}
+    .v{font-weight:700}
+    .gate{color:var(--blue)}
+
+    .badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;padding:4px 10px;border-radius:999px;border:1px solid var(--line)}
+    .b-ok{background:rgba(52,199,89,0.15);color:#bfffd1}
+    .b-warn{background:rgba(255,204,0,0.16);color:#fff1a8}
+    .b-bad{background:rgba(255,59,48,0.16);color:#ffd0cd}
+    .b-neu{background:rgba(142,142,147,0.18);color:#e7e7ea}
+
+    .mapBox{background:var(--card2);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+    .mapTop{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line);gap:10px}
+    .mapTitle{font-size:13px;font-weight:900}
+    .map{height:360px;}
+    #osmMap{height:360px;}
+
+    .btnRow{display:flex;gap:10px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap}
+    .btn{border:1px solid var(--line);background:rgba(255,255,255,0.06);color:#fff;border-radius:12px;padding:10px 14px;font-weight:800;cursor:pointer}
+    .btn.primary{background:var(--blue);border-color:rgba(10,132,255,0.35)}
+    .err{margin-top:10px;color:#ffb4ae;font-size:12px;white-space:pre-wrap}
+
+    .muted{color:var(--muted)}
+    .small{font-size:12px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <div class="title" id="hdrTitle">航班信息</div>
+        <div class="sub" id="hdrSub">—</div>
+      </div>
+      <div class="pill" id="whoPill">—</div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <div class="seg" id="legSeg"></div>
+        <div class="seg" id="mapSeg">
+          <button type="button" data-map="apple">Apple</button>
+          <button type="button" data-map="osm">OSM</button>
+        </div>
+      </div>
+
+      <div class="grid" style="margin-top:12px">
+        <div class="card" style="background:transparent;border:none;padding:0">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+            <div class="badge b-neu" id="statusBadge">SCHEDULED</div>
+            <div class="small muted" id="updatedTxt">—</div>
+          </div>
+
+          <div class="kv" id="kv"></div>
+
+          <div class="btnRow">
+            <button class="btn" id="backBtn" type="button">返回修改</button>
+            <button class="btn primary" id="navBtn" type="button">开始导航</button>
+          </div>
+
+          <div class="err" id="err"></div>
+        </div>
+
+        <div class="mapBox">
+          <div class="mapTop">
+            <div>
+              <div class="mapTitle" id="mapTitle">地图</div>
+              <div class="small muted" id="mapDesc">—</div>
+            </div>
+          </div>
+          <div id="appleMap" class="map"></div>
+          <div id="osmMap" style="display:none"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  const qs = (k) => new URL(location.href).searchParams.get(k);
+  const pid = qs('pid') || qs('pax') || 'TX1';
+  const tenant = qs('tenant') || 'airchina_sfo';
+  const plan = qs('plan') || 'free';
+  const name = qs('name') || (plan === 'premium' ? 'SIYAO FU' : 'Guest');
+  const intent = (qs('intent') || '').toLowerCase();
+  const flight = (qs('flight') || '').trim();
+  const arrFlight = (qs('arr') || '').trim();
+  const depFlight = (qs('dep') || '').trim();
+
+  const elTitle = document.getElementById('hdrTitle');
+  const elSub = document.getElementById('hdrSub');
+  const whoPill = document.getElementById('whoPill');
+  whoPill.textContent = `${name} (${pid}) · ${plan === 'premium' ? '💎 Premium' : 'Free'}`;
+
+  const legSeg = document.getElementById('legSeg');
+  const kv = document.getElementById('kv');
+  const err = document.getElementById('err');
+  const statusBadge = document.getElementById('statusBadge');
+  const updatedTxt = document.getElementById('updatedTxt');
+  const mapTitle = document.getElementById('mapTitle');
+  const mapDesc = document.getElementById('mapDesc');
+
+  const appleDiv = document.getElementById('appleMap');
+  const osmDiv = document.getElementById('osmMap');
+
+  let mapMode = localStorage.getItem('pax_map_mode') || 'apple';
+  let activeLeg = null; // 'dep' | 'arr' | 't1' | 't2'
+
+  let appleMap = null;
+  let appleMarkers = [];
+  let osmMap = null;
+  let osmLayer = null;
+  let osmMarkers = [];
+
+  function setError(msg){
+    err.textContent = msg || '';
+  }
+
+  function setBadge(label, cls){
+    statusBadge.textContent = label || '—';
+    statusBadge.className = 'badge ' + (cls === 'ok' ? 'b-ok' : cls === 'warn' ? 'b-warn' : cls === 'bad' ? 'b-bad' : 'b-neu');
+  }
+
+  function mkKV(rows){
+    kv.innerHTML = '';
+    rows.forEach(([k,v,klass])=>{
+      const dk = document.createElement('div'); dk.className='k'; dk.textContent=k;
+      const dv = document.createElement('div'); dv.className='v' + (klass?(' '+klass):''); dv.textContent=v;
+      kv.appendChild(dk); kv.appendChild(dv);
+    });
+  }
+
+  function makeLegButtons(legs){
+    legSeg.innerHTML = '';
+    legs.forEach(({id,label})=>{
+      const b = document.createElement('button');
+      b.type='button'; b.textContent=label; b.dataset.leg=id;
+      b.className = (activeLeg===id)?'active':'';
+      b.addEventListener('click', ()=>{ activeLeg=id; updateLegUI(); });
+      legSeg.appendChild(b);
+    });
+  }
+
+  function setMapMode(m){
+    mapMode = m;
+    localStorage.setItem('pax_map_mode', mapMode);
+    document.querySelectorAll('#mapSeg button').forEach(btn=>{
+      btn.classList.toggle('active', btn.dataset.map === mapMode);
+    });
+    if (mapMode === 'apple'){
+      appleDiv.style.display='block';
+      osmDiv.style.display='none';
+      // lazy init
+      ensureAppleMap().catch(()=>{ setMapMode('osm'); });
+    } else {
+      appleDiv.style.display='none';
+      osmDiv.style.display='block';
+      ensureOSMMap();
+    }
+    // redraw markers based on active leg
+    updateLegUI();
+  }
+
+  document.querySelectorAll('#mapSeg button').forEach(btn=>{
+    btn.addEventListener('click', ()=> setMapMode(btn.dataset.map));
+  });
+
+  async function apiJson(url, opts){
+    const r = await fetch(url, opts);
+    const j = await r.json();
+    return j;
+  }
+
+  async function getConfig(){
+    try{ return await apiJson('/api/config'); }catch{ return {ok:false}; }
+  }
+
+  async function ensureAppleMap(){
+    if (appleMap) return appleMap;
+    // wait for mapkit.js
+    await new Promise((res, rej)=>{
+      const t0 = Date.now();
+      (function check(){
+        if (window.mapkit) return res();
+        if (Date.now()-t0 > 5000) return rej(new Error('mapkit.js not loaded'));
+        setTimeout(check, 50);
+      })();
+    });
+
+    // init with token
+    window.mapkit.init({
+      authorizationCallback: function(done){
+        fetch('/api/mapkit/token', {cache:'no-store'}).then(r=>r.text()).then(t=>done(t)).catch(()=>done(''));
+      }
+    });
+
+    const cfg = await getConfig();
+    const mapId = cfg && cfg.ok && cfg.data ? (cfg.data.apple_maps_id || undefined) : undefined;
+
+    appleMap = new window.mapkit.Map('appleMap', {
+      mapId: mapId || undefined,
+      isRotationEnabled: true,
+      isZoomEnabled: true,
+      showsCompass: window.mapkit.FeatureVisibility.Hidden,
+    });
+    return appleMap;
+  }
+
+  function clearApple(){
+    if (!appleMap) return;
+    if (appleMarkers.length) appleMap.removeAnnotations(appleMarkers);
+    appleMarkers = [];
+  }
+
+  async function drawApple(airport, points){
+    await ensureAppleMap();
+    clearApple();
+
+    // center fallback
+    let center = null;
+    try{
+      const a = await apiJson(`/api/airport?airport=${encodeURIComponent(airport)}`);
+      if (a && a.ok && a.data && a.data.center) center = a.data.center;
+    }catch{}
+
+    const items = [];
+    for (const p of points){
+      if (!p.gate) continue;
+      let gateObj = null;
+      try{
+        const g = await apiJson(`/api/gate?airport=${encodeURIComponent(airport)}&gate=${encodeURIComponent(p.gate)}`);
+        if (g && g.ok) gateObj = g.data;
+      }catch{}
+      const ll = gateObj && gateObj.center ? gateObj.center : center;
+      if (!ll) continue;
+      const ann = new window.mapkit.MarkerAnnotation(new window.mapkit.Coordinate(ll[0], ll[1]), {
+        title: `${airport} ${p.gate}`,
+        glyphText: p.glyph || '✈️',
+        color: p.color || '#0a84ff',
+      });
+      items.push(ann);
+    }
+
+    if (items.length){
+      appleMap.addAnnotations(items);
+      appleMarkers = items;
+      try{ appleMap.showItems(items); }catch{}
+    } else if (center){
+      appleMap.region = new window.mapkit.CoordinateRegion(
+        new window.mapkit.Coordinate(center[0], center[1]),
+        new window.mapkit.CoordinateSpan(0.08, 0.08)
+      );
+    }
+  }
+
+  function ensureOSMMap(){
+    if (osmMap) return osmMap;
+    osmMap = L.map('osmMap', { zoomControl: true });
+    osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' });
+    osmLayer.addTo(osmMap);
+    return osmMap;
+  }
+
+  function clearOSM(){
+    if (!osmMap) return;
+    osmMarkers.forEach(m=>m.remove());
+    osmMarkers = [];
+  }
+
+  async function drawOSM(airport, points){
+    ensureOSMMap();
+    clearOSM();
+
+    let center = null;
+    try{
+      const a = await apiJson(`/api/airport?airport=${encodeURIComponent(airport)}`);
+      if (a && a.ok && a.data && a.data.center) center = a.data.center;
+    }catch{}
+
+    const latlngs = [];
+    for (const p of points){
+      if (!p.gate) continue;
+      let ll = center;
+      try{
+        const g = await apiJson(`/api/gate?airport=${encodeURIComponent(airport)}&gate=${encodeURIComponent(p.gate)}`);
+        if (g && g.ok && g.data && g.data.center) ll = g.data.center;
+      }catch{}
+      if (!ll) continue;
+      const m = L.marker([ll[0], ll[1]]).addTo(osmMap).bindPopup(`${airport} ${p.gate}`);
+      osmMarkers.push(m);
+      latlngs.push([ll[0], ll[1]]);
+    }
+
+    if (latlngs.length){
+      const b = L.latLngBounds(latlngs);
+      osmMap.fitBounds(b.pad(0.15));
+    } else if (center) {
+      osmMap.setView([center[0], center[1]], 14);
+    }
+  }
+
+  // Data holders
+  let single = null; // {instance, badge, ...}
+  let transfer = null; // {arrival, departure, hub_airport, from_gate, to_gate, ...}
+
+  function norm(s){ return (s||'').toString().trim(); }
+
+  function updateLegUI(){
+    // update leg buttons
+    document.querySelectorAll('#legSeg button').forEach(btn=>{
+      btn.classList.toggle('active', btn.dataset.leg === activeLeg);
+    });
+
+    if (intent === 'transfer'){
+      if (!transfer) return;
+      const hub = transfer.hub_airport;
+      const g1 = transfer.from_gate;
+      const g2 = transfer.to_gate;
+
+      const dist = transfer.walk_distance_m ? `${Math.round(transfer.walk_distance_m)} m` : '—';
+      const tmin = transfer.walk_time_min ? `${Math.round(transfer.walk_time_min)} min` : '—';
+
+      if (activeLeg === 't1'){
+        elTitle.textContent = `中转抵达 · ${norm(arrFlight) || transfer.arrival.flight_iata}`;
+        elSub.textContent = `${transfer.arrival.dep_iata} → ${transfer.arrival.arr_iata}`;
+        setBadge('ARRIVAL', 'ok');
+        updatedTxt.textContent = transfer.provider ? `Provider: ${transfer.provider}` : '';
+        mkKV([
+          ['抵达机场', transfer.arrival.arr_iata || '—'],
+          ['抵达航站楼', transfer.arrival.arr_terminal || '—'],
+          ['抵达登机口', transfer.arrival.arr_gate || '—', 'gate'],
+          ['中转到', `${g1} → ${g2}（${dist} / ${tmin}）`, ''],
+        ]);
+      } else {
+        elTitle.textContent = `中转出发 · ${norm(depFlight) || transfer.departure.flight_iata}`;
+        elSub.textContent = `${transfer.departure.dep_iata} → ${transfer.departure.arr_iata}`;
+        setBadge('DEPARTURE', 'ok');
+        updatedTxt.textContent = transfer.provider ? `Provider: ${transfer.provider}` : '';
+        mkKV([
+          ['出发机场', transfer.departure.dep_iata || '—'],
+          ['出发航站楼', transfer.departure.dep_terminal || '—'],
+          ['出发登机口', transfer.departure.dep_gate || '—', 'gate'],
+          ['中转从', `${g1} → ${g2}（${dist} / ${tmin}）`, ''],
+        ]);
+      }
+
+      mapTitle.textContent = `机场地图 · ${hub}`;
+      mapDesc.textContent = `展示登机口：${g1} 和 ${g2}`;
+
+      const points = [
+        { gate: g1, glyph: '1', color: '#34c759' },
+        { gate: g2, glyph: '2', color: '#0a84ff' },
+      ];
+
+      if (mapMode === 'apple') drawApple(hub, points).catch(()=>setMapMode('osm'));
+      else drawOSM(hub, points);
+      return;
+    }
+
+    // single flight
+    if (!single) return;
+    const inst = single.instance;
+
+    const depGate = inst.dep_gate || '—';
+    const arrGate = inst.arr_gate || '—';
+
+    const leg = (activeLeg === 'arr') ? 'arr' : 'dep';
+    const airport = (leg === 'dep') ? inst.dep_iata : inst.arr_iata;
+    const gate = (leg === 'dep') ? depGate : arrGate;
+    const terminal = (leg === 'dep') ? (inst.dep_terminal || '—') : (inst.arr_terminal || '—');
+
+    elTitle.textContent = `${inst.flight_iata || norm(flight)}`;
+    elSub.textContent = `${inst.dep_iata} → ${inst.arr_iata} · ${leg === 'dep' ? '出发' : '抵达'}页面`;
+
+    setBadge(single.badge?.label || 'SCHEDULED', single.badge?.class || 'neutral');
+    updatedTxt.textContent = `${single.updated || ''}`;
+
+    mkKV([
+      ['出发时间', inst.dep_time_local || '—'],
+      ['抵达时间', inst.arr_time_local || '—'],
+      ['出发航站楼', inst.dep_terminal || '—'],
+      ['出发登机口', depGate, 'gate'],
+      ['抵达航站楼', inst.arr_terminal || '—'],
+      ['抵达登机口', arrGate, 'gate'],
+    ]);
+
+    mapTitle.textContent = `${leg === 'dep' ? '出发' : '抵达'}地图 · ${airport}`;
+    mapDesc.textContent = `Terminal ${terminal} · Gate ${gate}`;
+
+    const points = [{ gate: gate, glyph: '✈️', color: '#0a84ff' }];
+    if (mapMode === 'apple') drawApple(airport, points).catch(()=>setMapMode('osm'));
+    else drawOSM(airport, points);
+  }
+
+  async function load(){
+    setError('');
+
+    // setup map mode UI
+    document.querySelectorAll('#mapSeg button').forEach(btn=>btn.classList.toggle('active', btn.dataset.map === mapMode));
+
+    if (intent === 'transfer'){
+      if (!arrFlight || !depFlight) {
+        setError('中转模式需要提供 arr 与 dep 航班号。');
+        return;
+      }
+      elTitle.textContent = '中转航班查询…';
+      elSub.textContent = `${arrFlight} / ${depFlight}`;
+
+      try{
+        const j = await apiJson('/api/transfer', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ arrFlight, depFlight })
+        });
+        if (!j || !j.ok) throw new Error(j?.message || j?.error || 'transfer failed');
+        transfer = j.data;
+
+        activeLeg = 't1';
+        makeLegButtons([
+          {id:'t1', label:'抵达航班'},
+          {id:'t2', label:'出发航班'},
+        ]);
+
+        setMapMode(mapMode);
+      }catch(e){
+        setError('FlightAware 查询失败：\n' + (e?.message || String(e)));
+      }
+      return;
+    }
+
+    // depart/arrive
+    if (!flight){
+      setError('请提供 flight 参数。');
+      return;
+    }
+
+    elTitle.textContent = '航班查询…';
+    elSub.textContent = flight;
+
+    try{
+      const j = await apiJson(`/api/flight/closest?q=${encodeURIComponent(flight)}`);
+      if (!j || !j.ok) throw new Error(j?.message || j?.error || 'flight lookup failed');
+      single = j.data;
+
+      activeLeg = (intent === 'arrive') ? 'arr' : 'dep';
+      makeLegButtons([
+        {id:'dep', label:'出发页'},
+        {id:'arr', label:'抵达页'},
+      ]);
+
+      setMapMode(mapMode);
+    }catch(e){
+      setError('FlightAware 查询失败：\n' + (e?.message || String(e)));
+    }
+  }
+
+  // buttons
+  document.getElementById('backBtn').addEventListener('click', ()=>{
+    // back to /pax -> login page
+    location.href = `/pax?tenant=${encodeURIComponent(tenant)}&pid=${encodeURIComponent(pid)}`;
+  });
+
+  document.getElementById('navBtn').addEventListener('click', ()=>{
+    // Step 4/5:暂时跳转到聊天页（pax.html）。
+    const u = new URL('/pax.html', location.origin);
+    u.searchParams.set('tenant', tenant);
+    u.searchParams.set('pax', pid);
+    u.searchParams.set('plan', plan);
+    u.searchParams.set('name', name);
+
+    if (intent === 'transfer'){
+      u.searchParams.set('arr', arrFlight);
+      u.searchParams.set('dep', depFlight);
+    }
+
+    location.href = u.pathname + '?' + u.searchParams.toString();
+  });
+
+  // init
+  setMapMode(mapMode);
+  load();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Orienta 航司后台 Demo（Static）</title>
+
+  <!-- Leaflet (OSM) only. MapKit JS requires HTTPS+origin allowlist; use the Vite version for Apple Maps. -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    :root{
+      --bg:#f5f5f7; --card:rgba(255,255,255,0.88); --line:rgba(0,0,0,0.08);
+      --text:#111827; --sub:#6b7280; --shadow:0 10px 30px rgba(0,0,0,0.10);
+      --r:18px; --blue:#0a84ff; --green:#34c759; --yellow:#ffcc00; --red:#ff3b30;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC",Segoe UI,Roboto,Helvetica,Arial}
+    .top{height:56px;display:flex;align-items:center;gap:12px;padding:0 14px;border-bottom:1px solid var(--line);background:rgba(255,255,255,0.78);backdrop-filter:blur(16px);position:sticky;top:0;z-index:3}
+    .logo{width:28px;height:28px;border-radius:10px;background:linear-gradient(135deg,#0ea5e9,#22c55e);box-shadow:0 8px 20px rgba(0,0,0,0.12)}
+    .title{font-weight:800}
+    .sub{font-size:12px;color:var(--sub)}
+    .main{height:calc(100vh - 56px);display:grid;grid-template-columns: 1fr 360px}
+    #map{height:100%;width:100%}
+    .side{border-left:1px solid var(--line);padding:14px;overflow:auto;background:rgba(245,245,247,0.7)}
+    .card{background:var(--card);border:1px solid rgba(0,0,0,0.06);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;margin-bottom:14px}
+    .row{display:flex;gap:10px;justify-content:space-between;margin:8px 0}
+    .k{font-size:12px;color:var(--sub)}
+    .v{font-weight:700}
+    .btn{height:36px;border-radius:12px;border:1px solid rgba(0,0,0,0.08);background:rgba(255,255,255,0.9);font-weight:700;cursor:pointer;padding:0 12px}
+    .btn.primary{background:rgba(10,132,255,0.12);border-color:rgba(10,132,255,0.22)}
+    .dot{width:10px;height:10px;border-radius:999px}
+    .dot.g{background:var(--green)} .dot.y{background:var(--yellow)} .dot.r{background:var(--red)} .dot.x{background:#9ca3af}
+    .badge{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,0.85);border:1px solid rgba(0,0,0,0.06);font-size:12px}
+    .toast{position:fixed;right:14px;bottom:14px;max-width:340px;background:rgba(255,255,255,0.92);border:1px solid rgba(0,0,0,0.06);box-shadow:0 18px 50px rgba(0,0,0,0.16);border-radius:16px;padding:12px;display:none;z-index:5}
+    .small{font-size:12px;color:var(--sub);line-height:1.4}
+    @media (max-width:980px){ .main{grid-template-columns:1fr} .side{position:fixed;left:12px;right:12px;bottom:12px;max-height:45vh;border-radius:18px;border:1px solid rgba(0,0,0,0.08);box-shadow:0 18px 50px rgba(0,0,0,0.16)} }
+  </style>
+</head>
+<body>
+  <div class="top">
+    <div class="logo"></div>
+    <div>
+      <div class="title">Orienta · 航司后台（Static）</div>
+      <div class="sub">OSM/Leaflet 预览版 · 用 Vite 版可启用 Apple MapKit JS</div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div id="map"></div>
+    <div class="side">
+      <div class="card" id="panel">
+        <div class="title" style="font-size:16px;margin-bottom:6px;">使用说明</div>
+        <div class="small">
+          • 点击 Gate 查看航班与旅客统计<br/>
+          • 点击旅客查看 ETA/判断/短信提醒<br/>
+          • 轨迹仅对 moving 旅客显示；购物/餐饮不显示
+        </div>
+      </div>
+      <div class="card">
+        <div class="title" style="font-size:16px;margin-bottom:6px;">数据说明</div>
+        <div class="small">
+          该 static 版使用仿真 gates + flights + passengers（≤30）。<br/>
+          真实 MapKit / Overpass / FlightAware 集成请看 Vite 版。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+  const PEK = [40.0801, 116.5850];
+  const map = L.map('map').setView(PEK, 14);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19, attribution:'© OpenStreetMap'}).addTo(map);
+
+  function synthGates(n=70){
+    const gates=[];
+    const a=[PEK[0]+0.004, PEK[1]-0.010], b=[PEK[0]+0.006, PEK[1]+0.012];
+    for(let i=0;i<n;i++){
+      const t=i/(n-1);
+      const lat=a[0]+(b[0]-a[0])*t + Math.sin(t*Math.PI*2)*0.0012;
+      const lng=a[1]+(b[1]-a[1])*t + Math.cos(t*Math.PI*2)*0.0008;
+      const zone=i < n*0.45 ? 'E' : i < n*0.75 ? 'D' : 'C';
+      const num=String(1+(i%32)).padStart(2,'0');
+      gates.push({id:`${zone}${num}_${i}`, name:`${zone}${num}`, lat, lng});
+    }
+    return gates;
+  }
+
+  function flights(){
+    const now=Date.now();
+    const c=[
+      {id:'CA123', dest:'SHA', gate:'E21', dep:now+35*60e3},
+      {id:'CA987', dest:'HKG', gate:'E19', dep:now+55*60e3},
+      {id:'CA556', dest:'SZX', gate:'D06', dep:now+18*60e3},
+    ];
+    return c.map((x,i)=>({...x, status: x.dep-now<12*60e3?'Final Call':x.dep-now<35*60e3?'Boarding':'Gate Open'}));
+  }
+
+  // i18n passenger profiles (CN + foreign)
+  const CN_PROFILES=[
+    {name:"王伟", nat:"CN", loc:"zh-CN"}, {name:"李娜", nat:"CN", loc:"zh-CN"}, {name:"张敏", nat:"CN", loc:"zh-CN"}, {name:"刘洋", nat:"CN", loc:"zh-CN"},
+    {name:"陈杰", nat:"CN", loc:"zh-CN"}, {name:"杨帆", nat:"CN", loc:"zh-CN"}, {name:"黄婷", nat:"CN", loc:"zh-CN"}, {name:"赵磊", nat:"CN", loc:"zh-CN"},
+    {name:"周洁", nat:"CN", loc:"zh-CN"}, {name:"吴昊", nat:"CN", loc:"zh-CN"}, {name:"孙悦", nat:"CN", loc:"zh-CN"}, {name:"朱琳", nat:"CN", loc:"zh-CN"},
+    {name:"马超", nat:"CN", loc:"zh-CN"}, {name:"胡静", nat:"CN", loc:"zh-CN"}, {name:"郭强", nat:"CN", loc:"zh-CN"}, {name:"唐雪", nat:"CN", loc:"zh-CN"},
+  ];
+  const FOREIGN_PROFILES=[
+    {name:"John Smith", nat:"US", loc:"en-US"}, {name:"Emily Johnson", nat:"US", loc:"en-US"}, {name:"Michael Brown", nat:"GB", loc:"en-GB"}, {name:"Sophia Davis", nat:"AU", loc:"en-AU"},
+    {name:"François Martin", nat:"FR", loc:"fr-FR"}, {name:"José García", nat:"ES", loc:"es-ES"}, {name:"Anna Müller", nat:"DE", loc:"de-DE"}, {name:"Luca Rossi", nat:"IT", loc:"it-IT"},
+    {name:"Satoshi Tanaka", nat:"JP", loc:"ja-JP"}, {name:"Min-ji Kim", nat:"KR", loc:"ko-KR"}, {name:"Arjun Patel", nat:"IN", loc:"en-IN"}, {name:"Priya Singh", nat:"IN", loc:"en-IN"},
+    {name:"Ivan Petrov", nat:"RU", loc:"ru-RU"}, {name:"Omar Al-Farsi", nat:"AE", loc:"ar-AE"}, {name:"Ana Souza", nat:"BR", loc:"pt-BR"},
+  ];
+  function shuffle(arr){ for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];} return arr; }
+
+  function distm(a,b){
+    const R=6371000,toRad=d=>d*Math.PI/180;
+    const dLat=toRad(b[0]-a[0]), dLon=toRad(b[1]-a[1]);
+    const lat1=toRad(a[0]), lat2=toRad(b[0]);
+    const s=Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;
+    return 2*R*Math.asin(Math.sqrt(s));
+  }
+  function mkPath(a,b,seg=10){
+    const pts=[];
+    const mid=[(a[0]+b[0])/2, (a[1]+b[1])/2];
+    const dx=b[1]-a[1], dy=b[0]-a[0];
+    const bend=0.18;
+    const mid2=[mid[0]+dy*bend, mid[1]-dx*bend];
+    for(let i=0;i<=seg;i++){
+      const t=i/seg;
+      const p1=[a[0]+(mid2[0]-a[0])*t, a[1]+(mid2[1]-a[1])*t];
+      const p2=[mid2[0]+(b[0]-mid2[0])*t, mid2[1]+(b[1]-mid2[1])*t];
+      pts.push([p1[0]+(p2[0]-p1[0])*t, p1[1]+(p2[1]-p1[1])*t]);
+    }
+    return pts;
+  }
+
+  const G = synthGates();
+  const F = flights();
+  const gateByName = new Map(G.map(g=>[g.name,g]));
+
+  function centroidLatLng(list){
+    let lat=0,lng=0;
+    for(const p of list){lat+=p.lat; lng+=p.lng;}
+    return {lat:lat/list.length, lng:lng/list.length};
+  }
+  function metersPerDeg(lat){
+    return {mLat:111000, mLng:111000*Math.cos(lat*Math.PI/180)};
+  }
+  function inwardFromGate(gate, center, fMin, fMax, lateralMax){
+    const {mLat,mLng} = metersPerDeg(gate.lat);
+    const vE=(center.lng-gate.lng)*mLng;
+    const vN=(center.lat-gate.lat)*mLat;
+    const dist=Math.hypot(vE,vN);
+    if(!isFinite(dist)||dist<5) return [gate.lat, gate.lng];
+    const uE=vE/dist, uN=vN/dist;
+    const pE=-uN, pN=uE;
+    const f=Math.max(8, Math.min(fMin + Math.random()*(fMax-fMin), dist-8));
+    const l=(Math.random()*2-1)*lateralMax;
+    const dE=uE*f + pE*l;
+    const dN=uN*f + pN*l;
+    return [gate.lat + dN/mLat, gate.lng + dE/mLng];
+  }
+
+  const T_CENTER = centroidLatLng(G);
+
+  const passengers=[];
+  const maxP=24;
+  const foreignCount=Math.max(3, Math.round(maxP*0.35));
+  const wcCount=Math.max(1, Math.round(maxP*0.12));
+  const seg=shuffle([
+    ...Array.from({length: Math.max(0, maxP-foreignCount)}, ()=>"CN"),
+    ...Array.from({length: Math.min(maxP, foreignCount)}, ()=>"FOREIGN"),
+  ]).slice(0,maxP);
+  const wcSet=new Set(shuffle(Array.from({length:maxP},(_,i)=>i)).slice(0,wcCount));
+  for(let i=0;i<maxP;i++){
+    const f=F[i%F.length];
+    const g=gateByName.get(f.gate);
+    const roll=Math.random();
+    const premium=Math.random()<0.22;
+    const wheelchair=wcSet.has(i);
+    const pool = seg[i]==='FOREIGN'?FOREIGN_PROFILES:CN_PROFILES;
+    const prof = pool[i%pool.length];
+    const act = roll<0.12?'boarded':roll<0.24?'at_gate':roll<0.62?'moving':roll<0.80?'shopping':roll<0.92?'dining':'idle';
+    // keep passengers inside terminal by moving inward (gate -> terminal center)
+    let start;
+    if(act==='at_gate'||act==='boarded') start = inwardFromGate(g, T_CENTER, 6, 20, 6);
+    else if(act==='moving') start = inwardFromGate(g, T_CENTER, 90, 260, 25);
+    else {
+      const anchor = G[Math.floor(Math.random()*G.length)];
+      start = inwardFromGate(anchor, T_CENTER, 120, 520, 60);
+    }
+    passengers.push({id:`P${i+1}`, name:prof.name, nat:prof.nat, loc:prof.loc, wheelchair, flightId:f.id, gate:g, act, premium, pos:start, path: act==='moving'?mkPath(start,[g.lat,g.lng],10):null, idx:0});
+  }
+
+  // markers
+  function gateIcon(text){
+    return L.divIcon({className:'', html:`<div style="width:28px;height:28px;border-radius:10px;background:rgba(10,132,255,0.9);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;box-shadow:0 10px 20px rgba(0,0,0,0.12);border:1px solid rgba(255,255,255,0.55)">${text}</div>`, iconSize:[28,28], iconAnchor:[14,14]});
+  }
+  function paxIcon(color, premium, wheelchair){
+    const bubble=premium?`<div style="position:absolute;top:-10px;right:-10px;font-size:14px">💬</div>`:'';
+    const wc=wheelchair?`<div style="position:absolute;top:-10px;left:-10px;font-size:14px">♿</div>`:'';
+    return L.divIcon({className:'', html:`<div style="position:relative">${wc}${bubble}<div style="width:16px;height:16px;border-radius:999px;background:${color};border:2px solid rgba(255,255,255,0.95);box-shadow:0 10px 22px rgba(0,0,0,0.18)"></div></div>`, iconSize:[20,20], iconAnchor:[10,10]});
+  }
+
+  const gateMarkers = new Map();
+  const paxMarkers = new Map();
+  const trackLines = new Map();
+
+  function fmtTime(ms){
+    const d=new Date(ms); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+  }
+  function statusFor(p){
+    const f=F.find(x=>x.id===p.flightId);
+    const dep=f.dep, close=dep-10*60e3;
+    const minsToClose=(close-Date.now())/60000;
+    if(p.act==='boarded') return {s:'green',eta:0,reason:'已登机'};
+    if(p.act==='at_gate') return {s: minsToClose<2?'yellow':'green',eta:0,reason:'已到达登机口'};
+    const sp = p.wheelchair ? 0.95 : 1.25;
+    const eta = distm(p.pos,[p.gate.lat,p.gate.lng])/(sp*60);
+    const slack = minsToClose-eta;
+    let s='green', reason='预计可准时到达';
+    if(slack<-1){s='red';reason='大概率无法赶上（时间不足）'}
+    else if(slack<3){s='yellow';reason='时间紧张（建议立即前往）'}
+    if(p.act==='shopping') reason = s==='green'?'在购物区（时间尚可）':'在购物区（时间紧张）';
+    if(p.act==='dining') reason = s==='green'?'在餐饮区（时间尚可）':'在餐饮区（时间紧张）';
+    if(p.act==='idle') reason = s==='green'?'停留中（可继续关注）':'停留中（建议立即行动）';
+    if(p.wheelchair) reason += ' · ♿ 轮椅/无障碍协助';
+    return {s, eta:Math.max(1,Math.round(eta)), reason};
+  }
+
+  function setPanel(html){ document.getElementById('panel').innerHTML = html; }
+  function toast(title, body){
+    const el=document.getElementById('toast');
+    el.innerHTML = `<div style="font-weight:800;margin-bottom:6px">${title}</div><div class="small" style="white-space:pre-wrap">${body}</div><div class="small" style="margin-top:8px">点击关闭</div>`;
+    el.style.display='block';
+    el.onclick=()=>el.style.display='none';
+    setTimeout(()=>{ el.style.display='none'; }, 6000);
+  }
+
+  // draw gates
+  for(const g of G){
+    const m=L.marker([g.lat,g.lng], {icon: gateIcon(g.name.slice(-2))}).addTo(map);
+    m.bindTooltip(`Gate ${g.name}`, {direction:'top', offset:[0,-10]});
+    m.on('click', ()=>{
+      const f = F.find(x=>x.gate===g.name) || F[0];
+      const ps = passengers.filter(p=>p.gate.name===g.name);
+      const boarded=ps.filter(p=>p.act==='boarded').length;
+      const atGate=ps.filter(p=>p.act==='at_gate').length;
+      const moving=ps.filter(p=>p.act==='moving').length;
+      const stay=ps.filter(p=>['shopping','dining','idle'].includes(p.act)).length;
+
+      setPanel(`
+        <div class="title" style="font-size:16px;margin-bottom:6px;">登机口 ${g.name}</div>
+        <div class="row"><div><div class="k">航班</div><div class="v">${f.id}</div></div><div><div class="k">目的地</div><div class="v">${f.dest}</div></div></div>
+        <div class="row"><div><div class="k">计划起飞</div><div class="v">${fmtTime(f.dep)}</div></div>
+          <div><div class="k">状态</div><div class="v"><span class="badge"><span class="dot ${f.status==='Final Call'?'y':f.status==='Boarding'?'g':'g'}"></span>${f.status}</span></div></div>
+        </div>
+        <div style="height:1px;background:rgba(0,0,0,0.06);margin:12px 0"></div>
+        <div class="row"><div><div class="k">旅客总数</div><div class="v">${ps.length}</div></div><div><div class="k">已登机</div><div class="v">${boarded}</div></div></div>
+        <div class="row"><div><div class="k">在路上</div><div class="v">${moving}</div></div><div><div class="k">停留</div><div class="v">${stay}</div></div></div>
+        <div class="row"><div><div class="k">已到口</div><div class="v">${atGate}</div></div><div></div></div>
+        <div class="small">提示：点击旅客 marker 查看 ETA 与短信提醒。</div>
+      `);
+    });
+    gateMarkers.set(g.id,m);
+  }
+
+  function update(){
+    for(const p of passengers){
+      const st=statusFor(p);
+      const color = st.s==='green'?'#34c759':st.s==='yellow'?'#ffcc00':st.s==='red'?'#ff3b30':'#9ca3af';
+      let m=paxMarkers.get(p.id);
+      if(!m){
+        m=L.marker(p.pos, {icon: paxIcon(color,p.premium,p.wheelchair)}).addTo(map);
+        m.on('click', ()=>{
+          const f=F.find(x=>x.id===p.flightId);
+          const lang = (p.loc||'').startsWith('zh')?'中文':(p.loc||'').startsWith('en')?'English':(p.loc||'');
+          setPanel(`
+            <div class="title" style="font-size:16px;margin-bottom:6px;">${p.name} <span class="small">(${p.id})</span> <span class="small">${p.nat||''} · ${lang}${p.wheelchair?' · ♿':''}${p.premium?' · 💬付费':''}</span></div>
+            <div class="row"><div><div class="k">航班</div><div class="v">${p.flightId}</div></div><div><div class="k">登机口</div><div class="v">${p.gate.name}</div></div></div>
+            <div class="row"><div><div class="k">状态灯</div><div class="v"><span class="badge"><span class="dot ${st.s==='green'?'g':st.s==='yellow'?'y':st.s==='red'?'r':'x'}"></span>${st.s.toUpperCase()}</span></div></div>
+              <div><div class="k">预计到达</div><div class="v">${st.eta==null?'—':st.eta+' 分钟'}</div></div></div>
+            <div class="row"><div><div class="k">判断</div><div class="v">${st.s==='green'?'✅ 能准时登机':st.s==='yellow'?'⚠️ 需要加快（可能等待2–3分钟）':st.s==='red'?'⛔ 大概率无法赶上':'—'}</div></div>
+              <div><div class="k">航班起飞</div><div class="v">${f?fmtTime(f.dep):'—'}</div></div></div>
+            <div style="height:1px;background:rgba(0,0,0,0.06);margin:12px 0"></div>
+            <div class="small" style="margin-bottom:8px">位置/行为：${st.reason}</div>
+            <button class="btn primary" id="smsBtn">发送短消息（模拟）</button>
+            ${p.premium?'<button class="btn" style="margin-left:10px" id="chatBtn">💬 转人工/Agent</button>':''}
+            <div class="small" style="margin-top:10px">短信内容示例：您好，这里是您乘坐航班 ${p.flightId}（登机口 ${p.gate.name}）。系统判断您距离登机口较远，存在误机风险，请立刻前往。如需导航请启动 Orienta。${p.wheelchair?' 如需无障碍/轮椅协助，请及时联系工作人员。':''}</div>
+          `);
+          setTimeout(()=>{
+            const b=document.getElementById('smsBtn');
+            if(b) b.onclick=()=>toast('短信已发送（模拟）', `发送给：${p.name} (${p.id})\n内容：请立即前往登机口 ${p.gate.name}，如需导航请启动 Orienta。`);
+            const c=document.getElementById('chatBtn');
+            if(c) c.onclick=()=>toast('聊天（demo）', '此 static 版不含聊天抽屉。\n请使用 Vite 版获取完整“转人工/Agent”体验。');
+          },0);
+        });
+        m.bindTooltip(`${p.name} (${p.id}) · ${p.nat||''}${p.wheelchair?' · ♿':''}${p.premium?' · 💬付费':''}`, {direction:'top', offset:[0,-10]});
+        paxMarkers.set(p.id,m);
+      }else{
+        m.setLatLng(p.pos);
+        m.setIcon(paxIcon(color,p.premium,p.wheelchair));
+      }
+
+      // Track
+      const existingLine = trackLines.get(p.id);
+      if(existingLine) { existingLine.remove(); trackLines.delete(p.id); }
+      if(p.act==='moving' && p.path){
+        const line=L.polyline(p.path, {weight:4,opacity:0.85,color, dashArray:'6 8'}).addTo(map);
+        trackLines.set(p.id,line);
+      }
+
+      // Move along path
+      if(p.act==='moving' && p.path){
+        const speed=p.wheelchair?0.95:1.25; // m/s
+        const idx=p.idx||0;
+        if(idx < p.path.length-1){
+          const a=p.path[idx], b=p.path[idx+1];
+          const seg=distm(a,b);
+          const segTime=seg/speed; // sec
+          const dt=1;
+          if(dt>=segTime){ p.idx=idx+1; p.pos=b; }
+          else{
+            const t=dt/segTime;
+            p.pos=[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t];
+          }
+        }else{
+          p.act='at_gate';
+        }
+      }
+    }
+  }
+
+  update();
+  setInterval(update, 1000);
+</script>
+</body>
+</html>

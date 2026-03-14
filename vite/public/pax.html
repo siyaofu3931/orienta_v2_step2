@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orienta · Passenger App</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, sans-serif; background: #000; color: #fff; height: 100dvh; display: flex; flex-direction: column; }
+  .hdr { padding: 14px 16px 10px; background: #1c1c1e; border-bottom: 1px solid #2c2c2e; display: flex; align-items: center; gap: 10px; }
+  .hdr-title { font-size: 17px; font-weight: 700; }
+  .hdr-sub { font-size: 12px; color: #8e8e93; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #636366; flex-shrink: 0; }
+  .dot.online { background: #34c759; }
+  .info-strip { padding: 10px 16px; background: #1c1c1e; border-bottom: 1px solid #2c2c2e; display: flex; gap: 16px; flex-wrap: wrap; }
+  .info-item { font-size: 12px; }
+  .info-label { color: #8e8e93; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .info-val { font-weight: 600; margin-top: 1px; }
+  .gate-val { color: #0a84ff; font-size: 16px; font-weight: 800; }
+  .msgs { flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .msg { display: flex; flex-direction: column; }
+  .msg.right { align-items: flex-end; }
+  .msg.left  { align-items: flex-start; }
+  .msg-meta { font-size: 10px; color: #636366; margin-bottom: 2px; }
+  .bubble { max-width: 78%; padding: 8px 12px; border-radius: 16px; font-size: 14px; line-height: 1.4; word-break: break-word; }
+  .bubble.pax    { background: #0a84ff; color: #fff; border-bottom-right-radius: 4px; }
+  .bubble.admin  { background: #2c2c2e; color: #fff; border-bottom-left-radius: 4px; }
+  .bubble.agent  { background: #3a3a5e; color: #fff; border-bottom-left-radius: 4px; }
+  .bubble.system { background: rgba(255,159,10,0.15); color: #ffd60a; font-style: italic; border-radius: 8px; }
+  .input-area { padding: 10px 16px 20px; background: #1c1c1e; border-top: 1px solid #2c2c2e; display: flex; gap: 8px; }
+  .input-area textarea { flex: 1; background: #2c2c2e; border: 1px solid #3a3a3c; border-radius: 20px; color: #fff; font-size: 15px; padding: 8px 14px; resize: none; height: 40px; line-height: 1.4; }
+  .btn-send { background: #0a84ff; color: #fff; border: none; border-radius: 20px; padding: 0 18px; font-size: 15px; font-weight: 600; cursor: pointer; height: 40px; white-space: nowrap; }
+  .btn-send:disabled { opacity: 0.4; }
+  .notify-banner { margin: 8px 16px; padding: 10px 14px; background: rgba(10,132,255,0.15); border: 1px solid rgba(10,132,255,0.3); border-radius: 10px; font-size: 13px; }
+  .notify-banner .dismiss { float: right; cursor: pointer; opacity: 0.6; font-size: 16px; margin-left: 8px; }
+  .status-row { padding: 0 16px 6px; display: flex; align-items: center; gap: 6px; font-size: 11px; color: #636366; }
+  .loc-btn { background: #2c2c2e; color: #fff; border: 1px solid #3a3a3c; border-radius: 8px; padding: 4px 10px; font-size: 12px; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="dot" id="connDot"></div>
+  <div>
+    <div class="hdr-title" id="paxName">Loading…</div>
+    <div class="hdr-sub" id="paxSub"></div>
+  </div>
+</div>
+
+<div class="info-strip" id="infoStrip" style="display:none">
+  <div class="info-item">
+    <div class="info-label">Inbound</div>
+    <div class="info-val" id="infoInbound">—</div>
+  </div>
+  <div class="info-item">
+    <div class="info-label">Outbound</div>
+    <div class="info-val" id="infoOutbound">—</div>
+  </div>
+  <div class="info-item">
+    <div class="info-label">Gate</div>
+    <div class="gate-val" id="infoGate">—</div>
+  </div>
+  <div class="info-item">
+    <div class="info-label">Status</div>
+    <div class="info-val" id="infoStatus">—</div>
+  </div>
+</div>
+
+<div id="notifyBanners"></div>
+
+<div class="msgs" id="msgs">
+  <div style="text-align:center;color:#636366;font-size:13px;margin-top:20px">
+    Connected to Orienta Transfer Assist<br>
+    <span id="premiumNote" style="font-size:11px;margin-top:4px;display:block"></span>
+  </div>
+</div>
+
+<div class="status-row">
+  <span id="locStatus">Location: —</span>
+  <button class="loc-btn" id="locBtn" onclick="shareLocation()">📍 Share Location</button>
+</div>
+
+<div class="input-area" id="inputArea" style="display:none">
+  <textarea id="msgInput" placeholder="Type a message…" rows="1"
+    onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg();}"></textarea>
+  <button class="btn-send" id="sendBtn" onclick="sendMsg()">Send</button>
+</div>
+
+<script>
+const params = new URLSearchParams(location.search);
+const tenantId   = params.get("tenant") || "airchina";
+const passengerId = params.get("pax")   || "TX1";
+
+// Passenger profiles (mirror of passengerSim scenarios)
+const PAX_DATA = {
+  TX1:  { name: "SIYAO FU",        plan: "premium", inbound: "CA836←LHR", outbound: "CA783→FRA", gate: "E15", status: "At Risk" },
+  TX2:  { name: "Li Na",           plan: "premium", inbound: "CA856←FRA", outbound: "CA901→NRT", gate: "E08", status: "Moving" },
+  P3:   { name: "Maria Rodriguez", plan: "premium", inbound: "CA901←NRT", outbound: "CA931→LAX", gate: "E11", status: "Moving (♿)" },
+  P4:   { name: "Arjun Sharma",    plan: "free",    inbound: "CA836←LHR", outbound: "CA931→LAX", gate: "E11", status: "On Track" },
+  P5:   { name: "Sophie Dupont",   plan: "free",    inbound: "CA856←FRA", outbound: "CA921→SYD", gate: "E14", status: "Shopping" },
+  P6:   { name: "Omar Al-Said",    plan: "free",    inbound: "CA901←NRT", outbound: "CA861→SIN", gate: "E36", status: "Missed" },
+  P13:  { name: "Lucas Martin",    plan: "free",    inbound: "CA921←SYD", outbound: "CA856→FRA", gate: "E16", status: "Moving" },
+};
+
+let info = PAX_DATA[passengerId] || { name: passengerId, plan: "free", inbound: "—", outbound: "—", gate: "—", status: "—" };
+// Allow /pax wrapper to override
+const overrideName = params.get("name");
+const overridePlan = params.get("plan");
+if (overrideName) info = { ...info, name: overrideName };
+if (overridePlan) info = { ...info, plan: overridePlan };
+const isPremium = info.plan === "premium";
+
+document.getElementById("paxName").textContent = info.name;
+document.getElementById("paxSub").textContent  = `(${passengerId}) · ${isPremium ? "💎 Premium" : "Free"}`;
+document.getElementById("premiumNote").textContent = isPremium
+  ? "Premium: You can chat directly with an operator."
+  : "Free: Assisted by AI agent.";
+
+document.getElementById("infoInbound").textContent  = info.inbound;
+document.getElementById("infoOutbound").textContent = info.outbound;
+document.getElementById("infoGate").textContent     = info.gate;
+document.getElementById("infoStatus").textContent   = info.status;
+document.getElementById("infoStrip").style.display  = "flex";
+if (isPremium) document.getElementById("inputArea").style.display = "flex";
+
+// ─── WebSocket ─────────────────────────────────────────────────
+let ws = null;
+let reconnTimer = null;
+
+function wsUrl() {
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  return `${proto}://${location.host}/ws`;
+}
+
+function connect() {
+  ws = new WebSocket(wsUrl());
+  ws.onopen = () => {
+    setOnline(true);
+    ws.send(JSON.stringify({ type: "hello", role: "pax", tenantId, passengerId, displayName: info.name, plan: info.plan }));
+    ws.send(JSON.stringify({ type: "chat_fetch", tenantId, passengerId }));
+
+    // Optional: navigation request from /pax entry page
+    const arr = params.get("arr") || params.get("arrival") || params.get("arrivalFlight");
+    const dep = params.get("dep") || params.get("departure") || params.get("departureFlight");
+    const q = params.get("q") || params.get("query");
+    if (arr && dep) {
+      ws.send(JSON.stringify({ type: "nav_request", tenantId, passengerId, kind: "transfer", arrivalFlight: arr, departureFlight: dep }));
+    } else if (q) {
+      ws.send(JSON.stringify({ type: "nav_request", tenantId, passengerId, kind: "nl", query: q }));
+    }
+  };
+  ws.onclose = () => { setOnline(false); reconnTimer = setTimeout(connect, 1500); };
+  ws.onerror = () => {};
+  ws.onmessage = (ev) => {
+    const m = (() => { try { return JSON.parse(ev.data); } catch { return null; } })();
+    if (!m) return;
+    if (m.type === "chat_msg")     handleChatMsg(m.message, true);
+    if (m.type === "chat_history") { clearMsgs(); m.messages.forEach(msg => handleChatMsg(msg, false)); }
+    if (m.type === "message")      showNotify(m.record.body, m.record.messageId);
+    if (m.type === "loc_request")  showLocRequest();
+  };
+}
+
+function setOnline(up) {
+  document.getElementById("connDot").className = "dot" + (up ? " online" : "");
+}
+
+connect();
+
+// ─── Messages ─────────────────────────────────────────────────
+const msgs = document.getElementById("msgs");
+
+function clearMsgs() {
+  msgs.innerHTML = "";
+}
+
+function handleChatMsg(msg, scroll) {
+  const isOwn = (msg.from === "pax");
+  const side  = isOwn ? "right" : "left";
+  const cls   = isOwn ? "pax" : msg.from; // admin / agent / system
+
+  const div = document.createElement("div");
+  div.className = `msg ${side}`;
+  div.dataset.msgId = msg.id;
+
+  const meta = document.createElement("div");
+  meta.className = "msg-meta";
+  const labels = { admin: "Operator", pax: "You", agent: "🤖 Orienta AI", system: "⚙️ System" };
+  const t = new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  meta.textContent = `${labels[msg.from] || msg.from} · ${t}`;
+
+  const bubble = document.createElement("div");
+  bubble.className = `bubble ${cls}`;
+  bubble.textContent = msg.body;
+
+  div.appendChild(meta);
+  div.appendChild(bubble);
+  msgs.appendChild(div);
+
+  if (scroll) msgs.scrollTop = msgs.scrollHeight;
+
+  // Send read receipt for operator messages
+  if ((msg.from === "admin" || msg.from === "agent") && ws && ws.readyState === 1) {
+    ws.send(JSON.stringify({ type: "chat_read", tenantId, passengerId, messageId: msg.id, at: Date.now() }));
+  }
+}
+
+function sendMsg() {
+  const ta = document.getElementById("msgInput");
+  const body = ta.value.trim();
+  if (!body || !ws || ws.readyState !== 1) return;
+  ws.send(JSON.stringify({ type: "chat_send", tenantId, passengerId, body, kind: "text" }));
+  ta.value = "";
+}
+
+// ─── Notifications ─────────────────────────────────────────────
+function showNotify(body, messageId) {
+  const container = document.getElementById("notifyBanners");
+  const div = document.createElement("div");
+  div.className = "notify-banner";
+  div.innerHTML = `<span class="dismiss" onclick="this.parentElement.remove()">×</span>📨 ${body}`;
+  container.appendChild(div);
+  // Auto-dismiss after 8s
+  setTimeout(() => { try { div.remove(); } catch {} }, 8000);
+  // Send ack
+  if (ws && ws.readyState === 1) {
+    ws.send(JSON.stringify({ type: "ack", tenantId, passengerId, messageId }));
+  }
+}
+
+function showLocRequest() {
+  showNotify("Orienta is requesting your current location. Please share it below.", "_loc_req_" + Date.now());
+  document.getElementById("locBtn").style.background = "#ff9f0a";
+  document.getElementById("locStatus").textContent = "⚠️ Location requested by operator";
+}
+
+// ─── Location ──────────────────────────────────────────────────
+function shareLocation() {
+  if (!navigator.geolocation) {
+    alert("Geolocation not available in this browser.");
+    return;
+  }
+  document.getElementById("locStatus").textContent = "Getting location…";
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const { latitude: lat, longitude: lng } = pos.coords;
+      const body = `📍 My location: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+      if (ws && ws.readyState === 1) {
+        ws.send(JSON.stringify({ type: "chat_send", tenantId, passengerId, body, kind: "location" }));
+      }
+      document.getElementById("locStatus").textContent = `Location shared: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      document.getElementById("locBtn").style.background = "#34c759";
+    },
+    (err) => {
+      document.getElementById("locStatus").textContent = "Location error: " + err.message;
+    }
+  );
+}
+</script>
+</body>
+</html>
