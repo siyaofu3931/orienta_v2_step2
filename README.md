@@ -27,8 +27,10 @@ Deploy to [Render](https://render.com): connect repo, use `render.yaml` or set:
 - **Start**: `cd vite && npm run start`
 
 **Mobile test (SIYAO FU / TX1)**:
-- Admin (computer): `https://<your-app>.onrender.com/` → login admin/admin → Map tab → select TX1
-- Pax (phone): `https://<your-app>.onrender.com/pax?pid=TX1&direct=1` → skip login, chat + Share Location use real GPS
+- Admin (computer): `https://<your-app>.onrender.com/` → login admin/admin → select **PEK** or **SFO** → Map tab → select TX1
+- Pax (phone):
+  - **PEK T3E**: `https://<your-app>.onrender.com/pax?pid=TX1&direct=1` (default tenant=airchina)
+  - **SFO**: `https://<your-app>.onrender.com/pax?pid=TX1&direct=1&tenant=airchina_sfo`
 
 ---
 

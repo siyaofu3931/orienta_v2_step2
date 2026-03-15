@@ -15,7 +15,7 @@ type EntryPayload = {
 };
 
 /**
- * Route: /pax?pid=TX1&tenant=airchina_sfo
+ * Route: /pax?pid=TX1&tenant=airchina (PEK) or tenant=airchina_sfo (SFO)
  *
  * 1) Show uploaded login HTML (public/pax-login.html)
  * 2) When user clicks "开始导航" or sends "其它" -> login page postMessage
@@ -23,7 +23,7 @@ type EntryPayload = {
  */
 export default function PaxEntryWrapper() {
   const pid = useMemo(() => qs("pid") || qs("pax") || "TX1", []);
-  const tenantId = useMemo(() => qs("tenant") || "airchina_sfo", []);
+  const tenantId = useMemo(() => qs("tenant") || "airchina", []);
 
   const direct = useMemo(() => qs("direct") === "1" || qs("skip") === "1", []);
 
