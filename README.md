@@ -41,6 +41,7 @@ Deploy to [Render](https://render.com): connect repo, use `render.yaml` or set:
 | `APPLE_KEY_ID` | MapKit JS — Key ID |
 | `APPLE_MAPS_ID` | MapKit JS — Maps Identifier |
 | `APPLE_PRIVATE_KEY` | MapKit JS — Full PEM content of .p8 key (use `\n` for newlines) |
+| `APPLE_PRIVATE_KEY_PATH` | 或使用 Secret File 路径，如 `/etc/secrets/AuthKey_xxx.p8` |
 
 **MapKit 调试**：部署后访问 `https://你的应用.onrender.com/api/debug` 或 `/api/mapkit/debug` 可查看 origin、凭证是否就绪，以及是否需在 Apple Developer 添加 Allowed Origins。
 

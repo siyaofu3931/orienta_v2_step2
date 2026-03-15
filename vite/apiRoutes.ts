@@ -5,6 +5,7 @@
  */
 import type { Request, Response } from "express";
 import * as jose from "jose";
+import { readFileSync, existsSync } from "node:fs";
 
 // Static airport centers (PEK T3E, SFO)
 const AIRPORT_CENTERS: Record<string, [number, number]> = {
@@ -129,6 +130,15 @@ function toInstanceDict(inst: any) {
 function loadApplePrivateKey(): string {
   const pem = process.env.APPLE_PRIVATE_KEY || process.env.VITE_MAPKIT_PRIVATE_KEY || "";
   if (pem && pem.trim()) return pem.replace(/\\n/g, "\n").trim();
+
+  const keyPath = process.env.APPLE_PRIVATE_KEY_PATH || process.env.VITE_MAPKIT_PRIVATE_KEY_PATH || "";
+  if (keyPath && existsSync(keyPath)) {
+    try {
+      return readFileSync(keyPath, "utf8").trim();
+    } catch {
+      return "";
+    }
+  }
   return "";
 }
 
