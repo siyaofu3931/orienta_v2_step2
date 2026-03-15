@@ -15,6 +15,21 @@ npm run dev -- --host 0.0.0.0 --port 5174
 - Admin Dashboard: `http://localhost:5174/`
 - Passenger Client: `http://<LAN-IP>:5174/pax?pid=TX1`
 
+### Production (Render)
+
+```bash
+cd vite
+npm run serve   # build + start
+```
+
+Deploy to [Render](https://render.com): connect repo, use `render.yaml` or set:
+- **Build**: `cd vite && npm ci && npm run build`
+- **Start**: `cd vite && npm run start`
+
+**Mobile test (SIYAO FU / TX1)**:
+- Admin (computer): `https://<your-app>.onrender.com/` → login admin/admin → Map tab → select TX1
+- Pax (phone): `https://<your-app>.onrender.com/pax?pid=TX1&direct=1` → skip login, chat + Share Location use real GPS
+
 ---
 
 ## Four-Device Test Setup

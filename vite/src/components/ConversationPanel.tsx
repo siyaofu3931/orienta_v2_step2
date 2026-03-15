@@ -148,7 +148,7 @@ export default function ConversationPanel({
       };
 
   return (
-    <div style={{ ...shellStyle, color: "#111827" }}>
+    <div className="conversation-panel" style={{ ...shellStyle, color: "#111827" }}>
       {/* Header */}
       <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(0,0,0,0.08)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>

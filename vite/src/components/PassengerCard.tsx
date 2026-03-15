@@ -33,7 +33,7 @@ export default function PassengerCard(props: {
   const badge = extBadge();
 
   return (
-    <div className="card">
+    <div className="card card-pax">
       <h3 style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
         <span>{p.name}</span>
         <span className="small">({p.id})</span>

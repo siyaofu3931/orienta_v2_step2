@@ -25,7 +25,17 @@ export default function PaxEntryWrapper() {
   const pid = useMemo(() => qs("pid") || qs("pax") || "TX1", []);
   const tenantId = useMemo(() => qs("tenant") || "airchina_sfo", []);
 
+  const direct = useMemo(() => qs("direct") === "1" || qs("skip") === "1", []);
+
   const [iframeSrc, setIframeSrc] = useState<string>(() => {
+    if (direct) {
+      const u = new URL("/pax.html", location.origin);
+      u.searchParams.set("tenant", tenantId);
+      u.searchParams.set("pax", pid);
+      u.searchParams.set("plan", "premium");
+      u.searchParams.set("name", "SIYAO FU");
+      return u.pathname + "?" + u.searchParams.toString();
+    }
     const u = new URL("/pax-login.html", location.origin);
     u.searchParams.set("pid", pid);
     u.searchParams.set("tenant", tenantId);

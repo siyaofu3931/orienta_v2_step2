@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: orienta
+    runtime: node
+    region: oregon
+    plan: free
+
+    buildCommand: cd vite && npm ci && npm run build
+    startCommand: cd vite && npm run start
+
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: PORT
+        generateValue: true

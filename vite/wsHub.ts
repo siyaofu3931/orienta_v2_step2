@@ -1,4 +1,5 @@
 import type { ViteDevServer } from "vite";
+import type { Server as HttpServer } from "node:http";
 import { WebSocketServer, type WebSocket } from "ws";
 import crypto from "node:crypto";
 
@@ -64,8 +65,8 @@ function aiAgentReply(passengerId: string, body: string, chatHistory: ChatMessag
   return `Thanks for your message. I'm Orienta AI assistant. Please proceed to your departure gate. Your real-time navigation is active on your screen. Reply with any questions!`;
 }
 
-export function attachWsHub(server: ViteDevServer) {
-  const httpServer = server.httpServer;
+export function attachWsHub(server: ViteDevServer | HttpServer) {
+  const httpServer = "httpServer" in server ? server.httpServer : server;
   if (!httpServer) return;
 
   const paxSockets = new Map<string, Set<WebSocket>>();
@@ -410,5 +411,5 @@ export function attachWsHub(server: ViteDevServer) {
     });
   });
 
-  server.httpServer.once("close", () => { try { wss.close(); } catch {} });
+  httpServer.once("close", () => { try { wss.close(); } catch {} });
 }

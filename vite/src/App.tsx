@@ -507,7 +507,7 @@ function Dashboard({ session, onLogout }: { session: AdminSession; onLogout(): v
                 realtimeInfo={{ rtUp, online: !!presence[selectedPax.id], lastMessage: null }}
               />
             ) : (
-              <div className="card">
+              <div className="card card-placeholder">
                 <h3>Transfer Control · {airport}</h3>
                 <RiskBadges counts={riskCounts} />
                 <div className="hr" />
@@ -516,7 +516,7 @@ function Dashboard({ session, onLogout }: { session: AdminSession; onLogout(): v
             )}
 
             {/* Priority List */}
-            <div className="card" style={{ marginTop: 10 }}>
+            <div className="card card-priority" style={{ marginTop: 10 }}>
               <h3 style={{ fontSize: 13 }}>🔴 Priority List</h3>
               {priorityList.length === 0 && <div className="small" style={{ opacity: 0.5 }}>No urgent passengers.</div>}
               {priorityList.map(p => (
@@ -533,13 +533,13 @@ function Dashboard({ session, onLogout }: { session: AdminSession; onLogout(): v
             </div>
 
             {/* Pax Simulator — flex-grows to fill remaining space */}
-            <div className="card" style={{ fontSize: 12, marginTop: 10, flexGrow: 1 }}>
+            <div className="card card-sim" style={{ fontSize: 12, marginTop: 10, flexGrow: 1 }}>
               <div style={{ fontWeight: 700, marginBottom: 6, fontSize: 13 }}>🧪 Pax Simulator</div>
               <div style={{ opacity: 0.7, marginBottom: 8, fontSize: 11 }}>
                 Open passenger frontend. TX1 = <b>Siyao Fu</b>（初始离线，需在前端登录上线）。
               </div>
               {simPax.map(({ id, name, plan, note }) => (
-                <div key={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                <div key={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                       <span style={{ width: 8, height: 8, borderRadius: "50%", background: presence[id] ? "#34c759" : "#636366", display: "inline-block" }} />
