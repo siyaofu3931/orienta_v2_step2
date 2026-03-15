@@ -19,8 +19,9 @@ app.use(express.json());
 registerApiRoutes(app);
 
 app.use(express.static(distDir));
-// SPA fallback: all non-file routes serve index.html
-app.get("*", (_req, res) => {
+// SPA fallback: serve index.html only for non-API routes (never for /api/*)
+app.get("*", (req, res) => {
+  if (req.path.startsWith("/api")) return res.status(404).json({ error: "not_found", path: req.path });
   res.sendFile(path.join(distDir, "index.html"));
 });
 
