@@ -1,17 +1,23 @@
 /**
  * Production server for Render deployment.
- * Serves static build + WebSocket for real-time chat & location.
+ * Serves static build + WebSocket + /api routes for flight/airport/gate.
  */
 import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express";
 import { attachWsHub } from "./wsHub";
+import { registerApiRoutes } from "./apiRoutes";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distDir = path.join(__dirname, "dist");
 
 const app = express();
+app.use(express.json());
+
+// API routes (flight, airport, gate) — must be before static
+registerApiRoutes(app);
+
 app.use(express.static(distDir));
 // SPA fallback: all non-file routes serve index.html
 app.get("*", (_req, res) => {
