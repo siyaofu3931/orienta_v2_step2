@@ -32,6 +32,9 @@ Deploy to [Render](https://render.com): connect repo, use `render.yaml` or set:
   - **PEK T3E**: `https://<your-app>.onrender.com/pax?pid=TX1&direct=1` (default tenant=airchina)
   - **SFO**: `https://<your-app>.onrender.com/pax?pid=TX1&direct=1&tenant=airchina_sfo`
 
+**Environment variable (for pax-flight UA889, map)**:
+- `FLIGHTAWARE_API_KEY` — Get from [FlightAware AeroAPI](https://flightaware.com/commercial/aeroapi/). Required for flight lookup (e.g. UA889) and gate display on pax-flight page.
+
 ---
 
 ## Four-Device Test Setup
