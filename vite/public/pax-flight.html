@@ -148,7 +148,7 @@
   const appleDiv = document.getElementById('appleMap');
   const osmDiv = document.getElementById('osmMap');
 
-  let mapMode = localStorage.getItem('pax_map_mode') || 'osm';
+  let mapMode = localStorage.getItem('pax_map_mode') || 'apple';
   let activeLeg = null; // 'dep' | 'arr' | 't1' | 't2'
 
   let appleMap = null;
@@ -243,7 +243,19 @@
     // init with token
     window.mapkit.init({
       authorizationCallback: function(done){
-        fetch('/api/mapkit/token', {cache:'no-store'}).then(r=>r.text()).then(t=>done(t)).catch(()=>done(''));
+        fetch('/api/mapkit/token', {cache:'no-store'})
+          .then(function(r){
+            if (!r.ok) return r.text().then(function(t){ throw new Error(r.status + ': ' + (t || r.statusText)); });
+            return r.text();
+          })
+          .then(function(t){
+            if (!t || !t.trim()) throw new Error('Empty token');
+            done(t);
+          })
+          .catch(function(err){
+            console.error('[MapKit] Token failed:', err && err.message ? err.message : err);
+            done('');
+          });
       }
     });
 

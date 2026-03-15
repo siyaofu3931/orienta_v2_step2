@@ -1,9 +1,10 @@
 /**
  * API routes for production server (Render).
- * Provides /api/flight/closest, /api/transfer, /api/airport, /api/gate
- * when Python backend is not available.
+ * Provides /api/flight/closest, /api/transfer, /api/airport, /api/gate,
+ * /api/mapkit/token, /api/config when Python backend is not available.
  */
 import type { Request, Response } from "express";
+import * as jose from "jose";
 
 // Static airport centers (PEK T3E, SFO)
 const AIRPORT_CENTERS: Record<string, [number, number]> = {
@@ -125,13 +126,72 @@ function toInstanceDict(inst: any) {
   };
 }
 
+function loadApplePrivateKey(): string {
+  const pem = process.env.APPLE_PRIVATE_KEY || process.env.VITE_MAPKIT_PRIVATE_KEY || "";
+  if (pem && pem.trim()) return pem.replace(/\\n/g, "\n").trim();
+  return "";
+}
+
+async function makeMapKitToken(origin: string): Promise<string> {
+  const teamId = process.env.APPLE_TEAM_ID || process.env.VITE_MAPKIT_TEAM_ID || "";
+  const keyId = process.env.APPLE_KEY_ID || process.env.VITE_MAPKIT_KEY_ID || "";
+  const keyPem = loadApplePrivateKey();
+
+  if (!teamId || !keyId || !keyPem) {
+    throw new Error("Missing MapKit credentials. Set APPLE_TEAM_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY.");
+  }
+
+  const key = await jose.importPKCS8(keyPem, "ES256");
+  const payload: Record<string, unknown> = { iss: teamId };
+  if (origin) payload.origin = [origin];
+
+  const jwt = await new jose.SignJWT(payload)
+    .setProtectedHeader({ alg: "ES256", kid: keyId, typ: "JWT" })
+    .setIssuedAt()
+    .setExpirationTime("1h")
+    .sign(key);
+
+  return jwt;
+}
+
 export function registerApiRoutes(app: import("express").Application) {
   app.get("/api/config", (_req, res) => {
-    res.json({ ok: false, data: null });
+    const mapsId = process.env.APPLE_MAPS_ID || process.env.VITE_MAPKIT_MAPS_ID || "";
+    res.json({
+      ok: !!mapsId || !!loadApplePrivateKey(),
+      data: mapsId ? { apple_maps_id: mapsId } : null,
+    });
   });
 
-  app.get("/api/mapkit/token", (_req, res) => {
-    res.type("text/plain").send("");
+  app.get("/api/mapkit/token", async (req, res) => {
+    res.type("text/plain; charset=utf-8");
+    const origin = (req.headers.origin || `${req.headers["x-forwarded-proto"] || "https"}://${req.headers["x-forwarded-host"] || req.headers.host || ""}`).trim();
+
+    try {
+      const token = await makeMapKitToken(origin);
+      res.send(token);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      res.status(500).send(msg);
+    }
+  });
+
+  app.get("/api/mapkit/debug", (req, res) => {
+    const origin = (req.headers.origin || `${req.headers["x-forwarded-proto"] || "https"}://${req.headers["x-forwarded-host"] || req.headers.host || ""}`).trim();
+    const teamId = !!(process.env.APPLE_TEAM_ID || process.env.VITE_MAPKIT_TEAM_ID);
+    const keyId = !!(process.env.APPLE_KEY_ID || process.env.VITE_MAPKIT_KEY_ID);
+    const mapsId = !!(process.env.APPLE_MAPS_ID || process.env.VITE_MAPKIT_MAPS_ID);
+    const keyPem = !!loadApplePrivateKey();
+    const ok = teamId && keyId && keyPem;
+    res.json({
+      origin,
+      hasTeamId: teamId,
+      hasKeyId: keyId,
+      hasMapsId: mapsId,
+      hasPrivateKey: keyPem,
+      ready: ok,
+      hint: ok ? "Add this origin to Apple Developer MapKit Allowed Origins: " + origin : "Set APPLE_TEAM_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY, APPLE_MAPS_ID",
+    });
   });
 
   app.get("/api/airport", (req, res) => {
