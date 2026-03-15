@@ -9,7 +9,7 @@ import ConversationPanel from "./components/ConversationPanel";
 import PaxEntryWrapper from "./components/PaxEntryWrapper";
 import { DeparturesFids, ArrivalsFids } from "./components/FidsPanel";
 
-import type { Gate, Flight, PassengerComputed, PaxExtStatus } from "./services/types";
+import type { Gate, Flight, LatLng, PassengerComputed, PaxExtStatus } from "./services/types";
 import {
   buildT3EGates, buildIntlFlights, createWorld, stepWorld, computePassenger,
 } from "./services/passengerSim";
@@ -20,7 +20,7 @@ import {
   getSession, loginWithPassword, loginWithSSO, logout as authLogout, type AdminSession,
 } from "./services/auth";
 import {
-  connectAdminRealtime, type MsgRecord, type MsgStatusEvent, type PresenceEvent, type ChatMessage,
+  connectAdminRealtime, type MsgRecord, type MsgStatusEvent, type PresenceEvent, type ChatMessage, type PaxTrajectoryData,
 } from "./services/realtime";
 
 export default function App() {
@@ -144,6 +144,7 @@ function Dashboard({ session, onLogout }: { session: AdminSession; onLogout(): v
 
   const [rtUp, setRtUp] = useState(false);
   const [presence, setPresence] = useState<Record<string, boolean>>({});
+  const [paxTrajectories, setPaxTrajectories] = useState<Record<string, PaxTrajectoryData>>({});
   const [msgById, setMsgById] = useState<Record<string, MsgRecord>>({});
   const [chatHistory, setChatHistory] = useState<Record<string, ChatMessage[]>>({});
   const rtRef = useRef<ReturnType<typeof connectAdminRealtime> | null>(null);
@@ -161,6 +162,7 @@ function Dashboard({ session, onLogout }: { session: AdminSession; onLogout(): v
     setMapViewMode("all");
     setChatHistory({});
     setPresence({});
+    setPaxTrajectories({});
     setTimeout(() => {
       if (airport === "PEK") {
         setPassengersRaw(createWorld(buildT3EGates(), buildIntlFlights(), 30));
@@ -224,6 +226,9 @@ function Dashboard({ session, onLogout }: { session: AdminSession; onLogout(): v
           ),
         }));
       },
+      onPaxTrajectory: (passengerId: string, data: PaxTrajectoryData) => {
+        setPaxTrajectories(t => ({ ...t, [passengerId]: data }));
+      },
     });
     rtRef.current = rt;
     return () => { rtRef.current = null; rt.close(); };
@@ -233,6 +238,7 @@ function Dashboard({ session, onLogout }: { session: AdminSession; onLogout(): v
     if (!passengersRaw?.passengers) return [];
     return passengersRaw.passengers.map((p: any) => {
       const isOnline = !!presence[p.id];
+      const trajectory = paxTrajectories[p.id];
 
       // Compute ETA-based risk (green/yellow/red) once a previously-offline passenger comes online.
       // This is more "product-like" than a fixed offline→yellow flip.
@@ -254,9 +260,16 @@ function Dashboard({ session, onLogout }: { session: AdminSession; onLogout(): v
 
       const computed: PassengerComputed = { ...computed0, extStatus };
       (computed as any).rtOnline = isOnline;
+
+      // When user is on PDR_AIRCHINA (or any client sending pax_trajectory), show current trajectory on map
+      if (trajectory && trajectory.position) {
+        (computed as any).location = trajectory.position as LatLng;
+        (computed as any).activity = "moving";
+        (computed as any).path = (trajectory.path?.length ? trajectory.path : [trajectory.position]) as LatLng[];
+      }
       return computed;
     });
-  }, [passengersRaw, gatesById, flightsById, presence]);
+  }, [passengersRaw, gatesById, flightsById, presence, paxTrajectories]);
 
   const hoverPax = useMemo(() =>
     hoverPaxId ? passengers.find(p => p.id === hoverPaxId) || null : null,

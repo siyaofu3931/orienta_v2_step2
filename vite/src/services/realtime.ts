@@ -33,6 +33,8 @@ export type ChatMessage = {
 export type PresenceEvent = { tenantId: string; passengerId: string; online: boolean; at: number };
 export type MsgStatusEvent = { tenantId: string; passengerId: string; messageId: string; status: MsgStatus; createdAt: number; deliveredAt?: number; ackAt?: number };
 
+export type PaxTrajectoryData = { path: { lat: number; lng: number }[]; position: { lat: number; lng: number } };
+
 function wsUrl() {
   const proto = location.protocol === "https:" ? "wss" : "ws";
   return `${proto}://${location.host}/ws`;
@@ -59,6 +61,7 @@ export function connectAdminRealtime(opts: {
   onChatMsg?(m: ChatMessage): void;
   onChatHistory?(passengerId: string, messages: ChatMessage[]): void;
   onChatRead?(passengerId: string, messageId: string, at: number): void;
+  onPaxTrajectory?(passengerId: string, data: PaxTrajectoryData): void;
   onConnectionChange?(up: boolean): void;
 }): AdminRealtime {
   const { tenantId } = opts;
@@ -89,6 +92,9 @@ export function connectAdminRealtime(opts: {
       if (m.type === "chat_msg") opts.onChatMsg?.(m.message);
       if (m.type === "chat_history") opts.onChatHistory?.(m.passengerId, m.messages);
       if (m.type === "chat_read") opts.onChatRead?.(m.passengerId, m.messageId, m.at);
+      if (m.type === "pax_trajectory" && m.passengerId && m.path && m.position) {
+        opts.onPaxTrajectory?.(m.passengerId, { path: m.path, position: m.position });
+      }
     };
   };
 
