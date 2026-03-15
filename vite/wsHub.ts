@@ -82,6 +82,9 @@ export function attachWsHub(server: ViteDevServer | HttpServer) {
   // Pax metadata (display name + plan override), keyed by `${tenantId}::${passengerId}`
   const paxMeta = new Map<string, { displayName?: string; plan?: string }>();
 
+  // PDR / live trajectory from pax (e.g. PDR_AIRCHINA), keyed by `${tenantId}::${passengerId}`
+  const paxTrajectories = new Map<string, { path: { lat: number; lng: number }[]; position: { lat: number; lng: number } }>();
+
   const wss = new WebSocketServer({ noServer: true });
 
   httpServer.on("upgrade", (req, socket, head) => {
@@ -175,6 +178,12 @@ export function attachWsHub(server: ViteDevServer | HttpServer) {
             if (!key.startsWith(`${tenantId}::`)) continue;
             const pid = key.split("::")[1] || "";
             wsSend(ws, { type: "presence", tenantId, passengerId: pid, online: true, at: Date.now() });
+          }
+          // Send current PDR trajectories for this tenant
+          for (const [key, data] of paxTrajectories) {
+            if (!key.startsWith(`${tenantId}::`)) continue;
+            const pid = key.split("::")[1] || "";
+            wsSend(ws, { type: "pax_trajectory", tenantId, passengerId: pid, path: data.path, position: data.position });
           }
           // Send recent messages
           const recent = Array.from(messages.values())
@@ -385,6 +394,24 @@ export function attachWsHub(server: ViteDevServer | HttpServer) {
         return;
       }
 
+      // === PAX: send current trajectory (e.g. from PDR_AIRCHINA) for back office map ===
+      if (role === "pax" && msg.type === "pax_trajectory") {
+        if (!passengerId || !tenantId) return;
+        const path = Array.isArray(msg.path) ? msg.path : [];
+        const pos = msg.position && typeof msg.position.lat === "number" && typeof msg.position.lng === "number"
+          ? { lat: msg.position.lat, lng: msg.position.lng } : null;
+        const key = `${tenantId}::${passengerId}`;
+        const prev = paxTrajectories.get(key);
+        const position = pos || prev?.position;
+        const pathPoints = path.length > 0 ? path.map((p: any) => ({ lat: Number(p.lat), lng: Number(p.lng) })) : (prev?.path || []);
+        if (position) {
+          const data = { path: pathPoints, position };
+          paxTrajectories.set(key, data);
+          broadcastAdmins(tenantId, { type: "pax_trajectory", tenantId, passengerId, path: data.path, position: data.position });
+        }
+        return;
+      }
+
       // === ADMIN or PAX: fetch chat history ===
       if (msg.type === "chat_fetch") {
         const pid = (role === "pax" ? passengerId : msg.passengerId) || passengerId;
@@ -406,7 +433,10 @@ export function attachWsHub(server: ViteDevServer | HttpServer) {
         const set = paxSockets.get(key);
         if (set) { set.delete(ws); if (set.size === 0) paxSockets.delete(key); }
         const still = paxSockets.get(key);
-        if (!still || still.size === 0) setPresence(tenantId, passengerId, false);
+        if (!still || still.size === 0) {
+          setPresence(tenantId, passengerId, false);
+          paxTrajectories.delete(key);
+        }
       }
     });
   });
