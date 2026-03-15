@@ -176,7 +176,7 @@ export function registerApiRoutes(app: import("express").Application) {
     }
   });
 
-  app.get("/api/mapkit/debug", (req, res) => {
+  const debugHandler = (req: Request, res: Response) => {
     const origin = (req.headers.origin || `${req.headers["x-forwarded-proto"] || "https"}://${req.headers["x-forwarded-host"] || req.headers.host || ""}`).trim();
     const teamId = !!(process.env.APPLE_TEAM_ID || process.env.VITE_MAPKIT_TEAM_ID);
     const keyId = !!(process.env.APPLE_KEY_ID || process.env.VITE_MAPKIT_KEY_ID);
@@ -192,7 +192,9 @@ export function registerApiRoutes(app: import("express").Application) {
       ready: ok,
       hint: ok ? "Add this origin to Apple Developer MapKit Allowed Origins: " + origin : "Set APPLE_TEAM_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY, APPLE_MAPS_ID",
     });
-  });
+  };
+  app.get("/api/mapkit/debug", debugHandler);
+  app.get("/api/debug", debugHandler);
 
   app.get("/api/airport", (req, res) => {
     const airport = (req.query.airport as string || "").toUpperCase();
