@@ -111,6 +111,7 @@ const PROFILES = [
   // Premium passengers (TX1, TX2, P3, P7, P11, P15, P21, P27)
   { id: "TX1", name: "Siyao Fu",    nat: "CN", locale: "zh-CN", plan: "premium" as PaxPlan, wheelchair: false },
   { id: "TX2", name: "Sophie Chen", nat: "HK", locale: "zh-HK", plan: "premium" as PaxPlan, wheelchair: false },
+  { id: "TX3", name: "Yan Jiang",   nat: "CN", locale: "zh-CN", plan: "premium" as PaxPlan, wheelchair: false },
   { id: "P3",  name: "Anna Müller",  nat: "DE", locale: "de-DE", plan: "premium" as PaxPlan, wheelchair: true },
   { id: "P4",  name: "Raj Patel",    nat: "IN", locale: "en-IN", plan: "free"    as PaxPlan, wheelchair: false },
   { id: "P5",  name: "Yuki Tanaka",  nat: "JP", locale: "ja-JP", plan: "free"    as PaxPlan, wheelchair: false },
@@ -157,6 +158,7 @@ const PAX_SCENARIOS: Record<string, PaxScenario> = {
   // PREMIUM USERS
   "TX1": { extStatus: "red",     activity: "shopping",  outboundIdx: 1, inboundIdx: 0, note: "Shopping - very tight connection to LHR" },
   "TX2": { extStatus: "yellow",  activity: "moving",    outboundIdx: 0, inboundIdx: 1, note: "Moving to gate - time getting tight" },
+  "TX3": { extStatus: "red",     activity: "dining",    outboundIdx: 2, inboundIdx: 1, note: "At risk - Final Call flight, still dining" },
   "P3":  { extStatus: "green",   activity: "moving",    outboundIdx: 5, inboundIdx: 2, note: "♿ Wheelchair - moving with assistance" },
   "P7":  { extStatus: "green",   activity: "at_gate",   outboundIdx: 4, inboundIdx: 3, note: "Already at gate, waiting to board" },
   "P11": { extStatus: "lost",    activity: "idle",      outboundIdx: 3, inboundIdx: 4, note: "♿ Location signal lost in south wing" },
@@ -325,6 +327,8 @@ export function createWorld(_gates: Gate[], _flights: Flight[], _count: number):
     });
   }
 
+  // Ensure Yan Jiang (TX3) is visible at top of lists: sort so TX3 is first
+  passengers.sort((a, b) => (a.id === "TX3" ? 0 : 1) - (b.id === "TX3" ? 0 : 1));
   return { passengers };
 }
 

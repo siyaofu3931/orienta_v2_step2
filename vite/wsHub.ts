@@ -33,7 +33,7 @@ export type ChatMessage = {
 
 // Premium passenger IDs (can transfer to human agent)
 // Premium IDs — for both PEK and SFO tenants
-const PREMIUM_IDS = new Set(["TX1", "TX2", "SP1", "SP2", "SP3", "SP4", "P3", "P7", "P11", "P15", "P21", "P27"]);
+const PREMIUM_IDS = new Set(["TX1", "TX2", "TX3", "SP1", "SP2", "SP3", "SP4", "P3", "P7", "P11", "P15", "P21", "P27"]);
 
 function safeJsonParse(s: string): any {
   try { return JSON.parse(s); } catch { return null; }

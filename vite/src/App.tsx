@@ -236,7 +236,7 @@ function Dashboard({ session, onLogout }: { session: AdminSession; onLogout(): v
 
   const passengers: PassengerComputed[] = useMemo(() => {
     if (!passengersRaw?.passengers) return [];
-    return passengersRaw.passengers.map((p: any) => {
+    const list = passengersRaw.passengers.map((p: any) => {
       const isOnline = !!presence[p.id];
       const trajectory = paxTrajectories[p.id];
 
@@ -269,6 +269,48 @@ function Dashboard({ session, onLogout }: { session: AdminSession; onLogout(): v
       }
       return computed;
     });
+
+    // Always show Yan Jiang (TX3) first: remove any duplicate, then prepend one
+    const withoutTX3 = list.filter((p: PassengerComputed) => p.id !== "TX3");
+    const firstGate = gatesById.size > 0 ? Array.from(gatesById.values())[0] : null;
+    const firstFlight = flightsById.size > 0 ? Array.from(flightsById.values())[0] : null;
+    const gateId = firstGate?.id ?? "E22";
+    const flightId = firstFlight?.id ?? "CA781";
+    const loc = firstGate?.coordinate ?? { lat: 40.0742, lng: 116.6065 };
+    const yanJiang: PassengerComputed = (() => {
+      const fallbackP = {
+        id: "TX3",
+        name: "Yan Jiang",
+        nationality: "CN",
+        locale: "zh-CN",
+        needsWheelchair: false,
+        plan: "premium" as const,
+        transfer: {
+          direction: "intl_to_intl",
+          urgency: "urgent",
+          inboundFlight: "CA856",
+          inboundFrom: "FRA",
+          inboundArr: new Date(Date.now() - 70 * 60 * 1000).toISOString(),
+          outboundFlight: flightId,
+          outboundTo: "CDG",
+          outboundDep: new Date(Date.now() + 25 * 60 * 1000).toISOString(),
+          note: "At risk - Final Call flight, still dining",
+        },
+        flightId,
+        gateId,
+        activity: "dining" as const,
+        location: loc,
+        extStatus: "red" as PaxExtStatus,
+        path: undefined,
+        pathIndex: undefined,
+        lastUpdateMs: Date.now(),
+      };
+      const gate = gatesById.get(gateId) || firstGate;
+      const flight = flightsById.get(flightId) || firstFlight;
+      const c = computePassenger(fallbackP as any, flight, gate);
+      return { ...c, extStatus: "red" as PaxExtStatus };
+    })();
+    return [yanJiang, ...withoutTX3];
   }, [passengersRaw, gatesById, flightsById, presence, paxTrajectories]);
 
   const hoverPax = useMemo(() =>
@@ -340,8 +382,8 @@ function Dashboard({ session, onLogout }: { session: AdminSession; onLogout(): v
     });
   }, [passengers, search, gatesById]);
 
-  const priorityList = useMemo(() =>
-    passengers
+  const priorityList = useMemo(() => {
+    const list = passengers
       .filter(p => ["lost", "red", "missed"].includes(p.extStatus) || p.transfer?.urgency === "urgent")
       .sort((a, b) => {
         const rank = (p: PassengerComputed) => {
@@ -350,12 +392,15 @@ function Dashboard({ session, onLogout }: { session: AdminSession; onLogout(): v
           if (p.transfer?.urgency === "urgent") return 2;
           if (p.extStatus === "missed") return 3;
           return 4;
-        };
-        return rank(a) - rank(b);
+        }
+        const r = rank(a) - rank(b);
+        if (r !== 0) return r;
+        // Within same rank, put Yan Jiang (TX3) first
+        return (a.id === "TX3" ? -1 : 0) - (b.id === "TX3" ? -1 : 0);
       })
-      .slice(0, 8),
-    [passengers]
-  );
+      .slice(0, 12);
+    return list;
+  }, [passengers]);
 
   // Passengers to display on map based on mapViewMode and gate search
   const mapPassengers = useMemo(() => {
@@ -378,12 +423,14 @@ function Dashboard({ session, onLogout }: { session: AdminSession; onLogout(): v
   const mapLabel = airport === "PEK" ? "🗺️ Map T3E" : "🗺️ Map SFO";
   const simPax = airport === "SFO"
     ? [
+        { id: "TX3",  name: "Yan Jiang",   plan: "Premium", note: "At Risk" },
         { id: "TX1",  name: "Siyao Fu",    plan: "Premium", note: "Offline初始 · 需登录" },
         { id: "TX2",  name: "David Kim",   plan: "Premium", note: "Moving · Tight" },
         { id: "FP1",  name: "Lucas Martin",plan: "Free",    note: "AI agent only" },
         { id: "FP5",  name: "Ivan Petrov", plan: "Free",    note: "Location Lost" },
       ]
     : [
+        { id: "TX3",  name: "Yan Jiang",   plan: "Premium", note: "At Risk" },
         { id: "TX1",  name: "Siyao Fu",    plan: "Premium", note: "Offline初始" },
         { id: "TX2",  name: "Sophie Chen", plan: "Premium", note: "Normal · Moving" },
         { id: "P4",   name: "Raj Patel",   plan: "Free",    note: "AI agent only" },

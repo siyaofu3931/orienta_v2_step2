@@ -200,6 +200,7 @@ const SFO_PROFILES = [
   { id: "SP2",  name: "Marco Ricci",       nat: "IT", locale: "it-IT", plan: "premium" as PaxPlan, wheelchair: true,  initOffline: false },
   { id: "SP3",  name: "Yuki Tanaka",       nat: "JP", locale: "ja-JP", plan: "premium" as PaxPlan, wheelchair: false, initOffline: false },
   { id: "SP4",  name: "Priya Nair",        nat: "IN", locale: "en-IN", plan: "premium" as PaxPlan, wheelchair: false, initOffline: false },
+  { id: "TX3",  name: "Yan Jiang",        nat: "CN", locale: "zh-CN", plan: "premium" as PaxPlan, wheelchair: false, initOffline: false },
   // Free
   { id: "FP1",  name: "Lucas Martin",      nat: "FR", locale: "fr-FR", plan: "free" as PaxPlan,    wheelchair: false, initOffline: false },
   { id: "FP2",  name: "Aisha Hassan",      nat: "EG", locale: "ar-EG", plan: "free" as PaxPlan,    wheelchair: false, initOffline: false },
@@ -235,6 +236,7 @@ const SFO_SCENARIOS: Record<string, { extStatus: PaxExtStatus; activity: string;
   "SP2":  { extStatus: "green",   activity: "at_gate",  inboundIdx: 3, outboundIdx: 3, note: "♿ At gate G3 with assistance" },
   "SP3":  { extStatus: "green",   activity: "moving",   inboundIdx: 4, outboundIdx: 4, note: "Moving to F18" },
   "SP4":  { extStatus: "red",     activity: "shopping", inboundIdx: 5, outboundIdx: 5, note: "At Duty Free — final call DL504" },
+  "TX3":  { extStatus: "red",     activity: "dining",   inboundIdx: 1, outboundIdx: 4, note: "At risk — Final Call flight, still dining" },
   "FP1":  { extStatus: "green",   activity: "moving",   inboundIdx: 6, outboundIdx: 6, note: "Moving to G7" },
   "FP2":  { extStatus: "yellow",  activity: "dining",   inboundIdx: 7, outboundIdx: 7, note: "Dining — tight window" },
   "FP3":  { extStatus: "offline", activity: "idle",     inboundIdx: 0, outboundIdx: 8, note: "No network — European SIM" },
@@ -346,6 +348,8 @@ export function buildSFOWorld(gates: Gate[], flights: Flight[]): { passengers: P
     });
   }
 
+  // Ensure Yan Jiang (TX3) is visible at top of lists
+  passengers.sort((a, b) => (a.id === "TX3" ? 0 : 1) - (b.id === "TX3" ? 0 : 1));
   return { passengers };
 }
 
