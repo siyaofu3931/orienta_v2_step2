@@ -212,7 +212,15 @@
 
   async function apiJson(url, opts){
     const r = await fetch(url, opts);
-    const j = await r.json();
+    const text = await r.text();
+    if (!text || !text.trim()) {
+      const msg = r.ok ? '服务器返回空内容。' : `请求失败 (${r.status})：后端可能未启动，请确认 port 8000 服务已运行。`;
+      throw new Error(msg);
+    }
+    let j;
+    try { j = JSON.parse(text); } catch (e) {
+      throw new Error('服务器返回了无效的 JSON：' + (e?.message || String(e)));
+    }
     return j;
   }
 
