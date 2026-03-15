@@ -32,8 +32,17 @@ Deploy to [Render](https://render.com): connect repo, use `render.yaml` or set:
   - **PEK T3E**: `https://<your-app>.onrender.com/pax?pid=TX1&direct=1` (default tenant=airchina)
   - **SFO**: `https://<your-app>.onrender.com/pax?pid=TX1&direct=1&tenant=airchina_sfo`
 
-**Environment variable (for pax-flight UA889, map)**:
-- `FLIGHTAWARE_API_KEY` — Get from [FlightAware AeroAPI](https://flightaware.com/commercial/aeroapi/). Required for flight lookup (e.g. UA889) and gate display on pax-flight page.
+**Environment variables (Render)**:
+
+| Variable | Purpose |
+|----------|---------|
+| `FLIGHTAWARE_API_KEY` | Flight lookup (UA889, etc.) on pax-flight page |
+| `APPLE_TEAM_ID` | MapKit JS — Apple Maps (Team ID) |
+| `APPLE_KEY_ID` | MapKit JS — Key ID |
+| `APPLE_MAPS_ID` | MapKit JS — Maps Identifier |
+| `APPLE_PRIVATE_KEY` | MapKit JS — Full PEM content of .p8 key (use `\n` for newlines) |
+
+**MapKit 调试**：部署后访问 `https://你的应用.onrender.com/api/mapkit/debug` 可查看 origin、凭证是否就绪，以及是否需在 Apple Developer 添加 Allowed Origins。
 
 ---
 
