@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import type { Gate, PassengerComputed, LatLng } from "../../services/types";
 import { T3E_SPINE_CENTER } from "../../services/passengerSim";
+import { ROUTE_E15_TO_E19 } from "../../data/routeE15toE19";
 import LeafletAdapter from "./leafletAdapter";
 import MapKitAdapter from "./mapkitAdapter";
 
@@ -63,14 +64,20 @@ export default function MapView(props: {
       color: statusColor(p),
     })), [passengers]);
 
+  const staticRoutes = useMemo(() => {
+    if (center.lng < 0) return []; // SFO
+    return [{ id: "e15-e19", points: ROUTE_E15_TO_E19, color: "#0a84ff" }];
+  }, [center.lng]);
+
   const payload = useMemo(() => ({
     center,
     gates,
     passengers,
     tracks,
+    staticRoutes,
     selectedGateId,
     selectedPassengerId,
-  }), [center, gates, passengers, tracks, selectedGateId, selectedPassengerId]);
+  }), [center, gates, passengers, tracks, staticRoutes, selectedGateId, selectedPassengerId]);
 
   // Probe MapKit on mount
   useEffect(() => {
