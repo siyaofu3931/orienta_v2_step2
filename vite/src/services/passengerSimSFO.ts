@@ -206,7 +206,7 @@ const SFO_PROFILES = [
   { id: "FP2",  name: "Aisha Hassan",      nat: "EG", locale: "ar-EG", plan: "free" as PaxPlan,    wheelchair: false, initOffline: false },
   { id: "FP3",  name: "Carlos Vega",       nat: "MX", locale: "es-MX", plan: "free" as PaxPlan,    wheelchair: false, initOffline: true  },
   { id: "FP4",  name: "Sophie Dubois",     nat: "FR", locale: "fr-FR", plan: "free" as PaxPlan,    wheelchair: false, initOffline: false },
-  { id: "FP5",  name: "Ivan Petrov",       nat: "RU", locale: "ru-RU", plan: "free" as PaxPlan,    wheelchair: false, initOffline: false },
+  { id: "FP5",  name: "Yan Jiang",         nat: "CN", locale: "zh-CN", plan: "premium" as PaxPlan, wheelchair: false, initOffline: false },
   { id: "FP6",  name: "Min-ji Lee",        nat: "KR", locale: "ko-KR", plan: "free" as PaxPlan,    wheelchair: false, initOffline: true  },
   { id: "FP7",  name: "Ahmed Al-Sayed",    nat: "SA", locale: "ar-SA", plan: "free" as PaxPlan,    wheelchair: false, initOffline: false },
   { id: "FP8",  name: "Zara Williams",     nat: "AU", locale: "en-AU", plan: "free" as PaxPlan,    wheelchair: true,  initOffline: false },

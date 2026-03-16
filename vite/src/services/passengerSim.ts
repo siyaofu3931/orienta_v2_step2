@@ -117,7 +117,7 @@ const PROFILES = [
   { id: "P5",  name: "Yuki Tanaka",  nat: "JP", locale: "ja-JP", plan: "free"    as PaxPlan, wheelchair: false },
   { id: "P6",  name: "Omar Al-Said", nat: "AE", locale: "ar-AE", plan: "free"    as PaxPlan, wheelchair: false },
   { id: "P7",  name: "Emily Johnson",nat: "US", locale: "en-US", plan: "premium" as PaxPlan, wheelchair: false },
-  { id: "P8",  name: "Ivan Petrov",  nat: "RU", locale: "ru-RU", plan: "free"    as PaxPlan, wheelchair: false },
+  { id: "P8",  name: "Yan Jiang",    nat: "CN", locale: "zh-CN", plan: "premium" as PaxPlan, wheelchair: false },
   { id: "P9",  name: "Min-ji Kim",   nat: "KR", locale: "ko-KR", plan: "free"    as PaxPlan, wheelchair: false },
   { id: "P10", name: "François Martin", nat: "FR", locale: "fr-FR", plan: "free" as PaxPlan, wheelchair: false },
   { id: "P11", name: "Isabella Romano", nat: "IT", locale: "it-IT", plan: "premium" as PaxPlan, wheelchair: true },

@@ -427,7 +427,7 @@ function Dashboard({ session, onLogout }: { session: AdminSession; onLogout(): v
         { id: "TX1",  name: "Siyao Fu",    plan: "Premium", note: "Offline初始 · 需登录" },
         { id: "TX2",  name: "David Kim",   plan: "Premium", note: "Moving · Tight" },
         { id: "FP1",  name: "Lucas Martin",plan: "Free",    note: "AI agent only" },
-        { id: "FP5",  name: "Ivan Petrov", plan: "Free",    note: "Location Lost" },
+        { id: "FP5",  name: "Yan Jiang",   plan: "Premium", note: "Location Lost" },
       ]
     : [
         { id: "TX3",  name: "Yan Jiang",   plan: "Premium", note: "At Risk" },

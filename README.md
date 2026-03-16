@@ -53,7 +53,7 @@ Deploy to [Render](https://render.com): connect repo, use `render.yaml` or set:
 |--------|-----|-----------|
 | 📱 Phone | `/pax?pid=TX1` | **TX1** · Premium · Urgent → London LHR |
 | 📱 iPad 1 | `/pax?pid=TX2` | **TX2** · Premium · Tight → Frankfurt FRA |
-| 📱 iPad 2 | `/pax?pid=P8` | **P8** · Free · **Location Lost** |
+| 📱 iPad 2 | `/pax?pid=P8` | **P8** · Premium · **Location Lost** |
 | 💻 Laptop | `/pax?pid=P6` | **P6** · Free · **Missed** Flight |
 
 Admin Dashboard: `http://localhost:5174/` (login: admin/admin)
@@ -62,21 +62,21 @@ Admin Dashboard: `http://localhost:5174/` (login: admin/admin)
 
 ## 30 Passengers — I→I Design
 
-### Premium (8 passengers — can transfer to human operator)
+### Premium (9 passengers — can transfer to human operator)
 - **TX1** · James Wilson (GB) · Red/Urgent · CA901→CA837 LHR · Shopping (tight!)
 - **TX2** · Sophie Chen (HK) · Yellow · CA856→CA783 FRA · Moving to gate
 - **P3** · Anna Müller (DE) · Green · ♿ Wheelchair · Moving with assistance
 - **P7** · Emily Johnson (US) · Green · At gate waiting to board
+- **P8** · Yan Jiang (CN) · **Lost** · Last seen south corridor
 - **P11** · Isabella Romano (IT) · **Lost** · ♿ Location signal lost in south wing
 - **P15** · Lena Novak (CZ) · Yellow · Dining — Final Call flight
 - **P21** · Henrik Larsen (DK) · Green · Moving to gate
 - **P27** · David Park (US) · **Offline** · No network
 
-### Free (22 passengers — AI agent only)
+### Free (21 passengers — AI agent only)
 - **P4** · Raj Patel (IN) · Green · Moving
 - **P5** · Yuki Tanaka (JP) · Yellow · Shopping
 - **P6** · Omar Al-Said (AE) · **Missed** · CA861→SIN already closed
-- **P8** · Ivan Petrov (RU) · **Lost** · Last seen south corridor
 - **P9**, **P10**, **P12**, **P17**, **P19**, **P23**, **P25**, **P29** · **Offline** (foreign SIMs/no data)
 - **P14** · Carlos García (ES) · **Missed** · CA741→MNL already closed
 - **P16** · Fatima Al-Rashid (SA) · Green · ♿ At gate with assistance
