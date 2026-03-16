@@ -44,6 +44,8 @@ export default function MapView(props: {
   onProviderChanged(p: MapProvider): void;
   visible?: boolean;
   centerOverride?: LatLng;
+  /** When "PEK", E15→E19 static route is drawn. Omit or SFO = no static route. */
+  airport?: "PEK" | "SFO";
 }) {
   const { gates, passengers, selectedGateId, selectedPassengerId,
           onSelectGate, onSelectPassenger, mapMode } = props;
@@ -65,9 +67,9 @@ export default function MapView(props: {
     })), [passengers]);
 
   const staticRoutes = useMemo(() => {
-    if (center.lng < 0) return []; // SFO
+    if (props.airport !== "PEK") return [];
     return [{ id: "e15-e19", points: ROUTE_E15_TO_E19, color: "#0a84ff" }];
-  }, [center.lng]);
+  }, [props.airport]);
 
   const payload = useMemo(() => ({
     center,
@@ -161,12 +163,15 @@ export default function MapView(props: {
     adapterRef.current?.setData(payload);
   }, [payload]);
 
-  // When tab becomes visible
+  // When tab becomes visible: re-apply data so route/layers draw correctly (map may have been zero-size before)
   useEffect(() => {
-    if (props.visible && adapterRef.current instanceof LeafletAdapter) {
-      (adapterRef.current as LeafletAdapter).invalidate();
+    if (props.visible && adapterRef.current) {
+      adapterRef.current.setData(payload);
+      if (adapterRef.current instanceof LeafletAdapter) {
+        (adapterRef.current as LeafletAdapter).invalidate();
+      }
     }
-  }, [props.visible]);
+  }, [props.visible, payload]);
 
   return (
     <div className="orienta-map-frame" style={{ width: "100%", height: "100%", minHeight: 0, position: "relative" }}>
