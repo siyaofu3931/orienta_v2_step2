@@ -211,10 +211,11 @@ export default class MapKitAdapter {
     gates: Gate[];
     passengers: PassengerComputed[];
     tracks: { id: string; passengerId: string; points: LatLng[]; color: string }[];
+    staticRoutes?: { id: string; points: LatLng[]; color?: string }[];
     selectedGateId: string | null;
     selectedPassengerId: string | null;
   }) {
-    const { gates, passengers, tracks } = data;
+    const { gates, passengers, tracks, staticRoutes = [] } = data;
 
     // --- Gates
     const keepGate = new Set(gates.map((g) => g.id));
@@ -291,6 +292,17 @@ export default class MapKitAdapter {
       });
     } catch {}
     this.overlays = [];
+
+    for (const r of staticRoutes) {
+      if (r.points.length < 2) continue;
+      const coords = r.points.map((pt) => toCoord(this.mapkit, pt));
+      const color = r.color ?? "#0a84ff";
+      const style = new this.mapkit.Style({ lineWidth: 5, lineJoin: "round", strokeColor: color });
+      const pl = new this.mapkit.PolylineOverlay(coords, { style });
+      if (typeof (this.map as any).addOverlay === "function") (this.map as any).addOverlay(pl);
+      else if (typeof (this.map as any).addOverlays === "function") (this.map as any).addOverlays([pl]);
+      this.overlays.push(pl);
+    }
 
     for (const t of tracks) {
       const coords = t.points.map((pt) => toCoord(this.mapkit, pt));

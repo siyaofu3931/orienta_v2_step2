@@ -80,6 +80,7 @@ export default class LeafletAdapter {
   private gateMarkers = new Map<string, L.Marker>();
   private paxMarkers  = new Map<string, L.Marker>();
   private tracks: L.Polyline[] = [];
+  private staticRoutePolylines: L.Polyline[] = [];
   private opts!: CreateOptions;
   private lastData: Parameters<LeafletAdapter["setData"]>[0] | null = null;
 
@@ -144,12 +145,13 @@ export default class LeafletAdapter {
     gates: Gate[];
     passengers: PassengerComputed[];
     tracks: { id: string; passengerId: string; points: LatLng[]; color: string }[];
+    staticRoutes?: { id: string; points: LatLng[]; color?: string }[];
     selectedGateId: string | null;
     selectedPassengerId: string | null;
   }) {
     const isFirstLoad = this.lastData === null;
     this.lastData = data;
-    const { gates, passengers, tracks } = data;
+    const { gates, passengers, tracks, staticRoutes = [] } = data;
 
     // ── Gates ──
     const keepG = new Set(gates.map(g => g.id));
@@ -205,6 +207,18 @@ export default class LeafletAdapter {
         { weight: 4, opacity: 0.9, color: t.color, dashArray: "6 8" }
       ).addTo(this.map);
       this.tracks.push(pl);
+    }
+
+    // ── Static routes (e.g. E15→E19) ──
+    this.staticRoutePolylines.forEach(p => p.remove());
+    this.staticRoutePolylines = [];
+    for (const r of staticRoutes) {
+      if (r.points.length < 2) continue;
+      const pl = L.polyline(
+        r.points.map(pt => [pt.lat, pt.lng] as [number, number]),
+        { weight: 5, opacity: 0.85, color: r.color ?? "#0a84ff" }
+      ).addTo(this.map);
+      this.staticRoutePolylines.push(pl);
     }
 
     // On first data load: fit bounds (works if container is visible)
