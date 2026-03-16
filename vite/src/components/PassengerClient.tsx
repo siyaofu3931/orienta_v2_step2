@@ -11,7 +11,7 @@ const PAX_OPTIONS = [
   { value: "TX1", label: "TX1 · Premium · Urgent (London)" },
   { value: "TX2", label: "TX2 · Premium · Tight (Frankfurt)" },
   { value: "P6",  label: "P6 · Free · Missed (Singapore)" },
-  { value: "P8",  label: "P8 · Free · Lost Location" },
+  { value: "P8",  label: "P8 · Premium · Lost Location" },
   { value: "P3",  label: "P3 · Premium · ♿ Wheelchair" },
   { value: "P5",  label: "P5 · Free · Shopping" },
   { value: "P7",  label: "P7 · Premium · At Gate" },

@@ -108,6 +108,12 @@ export default class LeafletAdapter {
       maxZoom: 19,
     }).addTo(inst.map);
 
+    // Pane for static route so it draws above markers (zIndex 700 > markerPane 600)
+    if (!inst.map.getPane("routePane")) {
+      inst.map.createPane("routePane");
+      (inst.map.getPane("routePane") as HTMLElement).style.zIndex = "700";
+    }
+
     container.style.cursor = "grab";
     inst.map.on("dragstart", () => { container.style.cursor = "grabbing"; });
     inst.map.on("dragend",   () => { container.style.cursor = "grab"; });
@@ -120,7 +126,14 @@ export default class LeafletAdapter {
     setTimeout(() => {
       this.map.invalidateSize();
       if (this.lastData) {
-        this._fitAll(this.lastData.gates, this.lastData.passengers);
+        const sr = this.lastData.staticRoutes;
+        this._fitAll(
+          this.lastData.gates,
+          this.lastData.passengers,
+          sr?.length ? sr : undefined
+        );
+        // Re-apply setData so static route is drawn now that map has size
+        this.setData(this.lastData);
       }
     }, 50);
   }
@@ -129,11 +142,20 @@ export default class LeafletAdapter {
     try { this.map.remove(); } catch {}
   }
 
-  private _fitAll(gates: Gate[], passengers: PassengerComputed[]) {
+  private _fitAll(
+    gates: Gate[],
+    passengers: PassengerComputed[],
+    staticRoutes?: { points: LatLng[] }[]
+  ) {
     const pts: [number, number][] = [
       ...gates.map(g => [g.coordinate.lat, g.coordinate.lng] as [number, number]),
       ...passengers.map(p => [p.location.lat, p.location.lng] as [number, number]),
     ];
+    if (staticRoutes) {
+      for (const r of staticRoutes) {
+        for (const p of r.points) pts.push([p.lat, p.lng]);
+      }
+    }
     if (pts.length === 0) return;
     try {
       this.map.fitBounds(L.latLngBounds(pts), { padding: [40, 40], maxZoom: 17 });
@@ -209,22 +231,26 @@ export default class LeafletAdapter {
       this.tracks.push(pl);
     }
 
-    // ── Static routes (e.g. E15→E19) ──
+    // ── Static routes (e.g. E15→E19) — use routePane so line is above markers ──
     this.staticRoutePolylines.forEach(p => p.remove());
     this.staticRoutePolylines = [];
     for (const r of staticRoutes) {
       if (r.points.length < 2) continue;
       const pl = L.polyline(
         r.points.map(pt => [pt.lat, pt.lng] as [number, number]),
-        { weight: 8, opacity: 0.95, color: r.color ?? "#0a84ff" }
-      ).addTo(this.map).bringToFront();
+        {
+          weight: 8,
+          opacity: 0.95,
+          color: r.color ?? "#0a84ff",
+          pane: "routePane",
+        }
+      ).addTo(this.map);
       this.staticRoutePolylines.push(pl);
     }
 
-    // On first data load: fit bounds (works if container is visible)
-    // If container is still display:none, invalidate() will redo this when tab opens
+    // On first data load: fit bounds (include static route so it's in view)
     if (isFirstLoad) {
-      this._fitAll(gates, passengers);
+      this._fitAll(gates, passengers, staticRoutes.length ? staticRoutes : undefined);
     }
   }
 }
