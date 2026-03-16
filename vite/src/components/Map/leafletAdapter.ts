@@ -216,8 +216,8 @@ export default class LeafletAdapter {
       if (r.points.length < 2) continue;
       const pl = L.polyline(
         r.points.map(pt => [pt.lat, pt.lng] as [number, number]),
-        { weight: 5, opacity: 0.85, color: r.color ?? "#0a84ff" }
-      ).addTo(this.map);
+        { weight: 8, opacity: 0.95, color: r.color ?? "#0a84ff" }
+      ).addTo(this.map).bringToFront();
       this.staticRoutePolylines.push(pl);
     }
 

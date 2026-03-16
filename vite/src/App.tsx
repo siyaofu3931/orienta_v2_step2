@@ -522,6 +522,7 @@ function Dashboard({ session, onLogout }: { session: AdminSession; onLogout(): v
         }}>
           <div style={{ flex: 1, minWidth: 0, height: "100%", display: "flex", flexDirection: "column" }}>
           <MapView
+            airport={airport}
             gates={gates}
             passengers={mapPassengers}
             selectedGateId={null}
