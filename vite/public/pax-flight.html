@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Orienta · Flight Result</title>
+  <title>Air China · 航班信息</title>
 
   <!-- Leaflet (OSM) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
@@ -28,6 +28,8 @@
     *{box-sizing:border-box}
     body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;}
     .wrap{max-width:980px;margin:0 auto;padding:14px;}
+    .brand-bar{display:flex;justify-content:center;align-items:center;padding:10px 0 6px;margin:0 0 4px;}
+    .brand-logo{height:48px;width:auto;max-width:min(220px,78vw);object-fit:contain;display:block;}
     .top{
       display:flex;align-items:center;justify-content:space-between;gap:12px;
       margin:8px 0 12px;
@@ -72,6 +74,9 @@
 </head>
 <body>
   <div class="wrap">
+    <div class="brand-bar">
+      <img class="brand-logo" src="/airchina-logo.png" alt="Air China" />
+    </div>
     <div class="top">
       <div>
         <div class="title" id="hdrTitle">航班信息</div>
@@ -131,13 +136,43 @@
   const qs = (k) => new URL(location.href).searchParams.get(k);
   const rawPid = qs('pid') || qs('pax') || 'TX1';
   const pid = resolveCanonicalPassengerId(rawPid) || rawPid;
-  const tenant = qs('tenant') || 'airchina_sfo';
+  const tenant = qs('tenant') || 'airchina';
   const plan = qs('plan') || 'free';
   const name = qs('name') || (plan === 'premium' ? 'SIYAO FU' : 'Guest');
   const intent = (qs('intent') || '').toLowerCase();
   const flight = (qs('flight') || '').trim();
   const arrFlight = (qs('arr') || '').trim();
   const depFlight = (qs('dep') || '').trim();
+
+  function parseSpawn(sp) {
+    const la = sp.get('spawnLat');
+    const ln = sp.get('spawnLng');
+    if (la && ln) {
+      const lat = parseFloat(la);
+      const lng = parseFloat(ln);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng };
+    }
+    if (sp.get('lounge') === '1' || sp.get('spawn') === 'lounge') {
+      return { lat: 40.077095, lng: 116.606151 };
+    }
+    return null;
+  }
+  const spawn = parseSpawn(new URL(location.href).searchParams);
+  if (spawn) {
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    var spawnWs = new WebSocket(proto + '://' + location.host + '/ws');
+    spawnWs.onopen = function () {
+      spawnWs.send(JSON.stringify({ type: 'hello', role: 'pax', tenantId: tenant, passengerId: pid }));
+      spawnWs.send(JSON.stringify({
+        type: 'pax_trajectory',
+        path: [{ lat: spawn.lat, lng: spawn.lng }],
+        position: { lat: spawn.lat, lng: spawn.lng },
+      }));
+    };
+    window.addEventListener('beforeunload', function () {
+      try { spawnWs.close(); } catch (e) {}
+    });
+  }
 
   const elTitle = document.getElementById('hdrTitle');
   const elSub = document.getElementById('hdrSub');
@@ -528,8 +563,14 @@
 
   // buttons
   document.getElementById('backBtn').addEventListener('click', ()=>{
-    // back to /pax -> login page
-    location.href = `/pax?tenant=${encodeURIComponent(tenant)}&pid=${encodeURIComponent(pid)}`;
+    const back = new URL('/pax', location.origin);
+    back.searchParams.set('tenant', tenant);
+    back.searchParams.set('pid', rawPid);
+    if (spawn) {
+      back.searchParams.set('spawnLat', String(spawn.lat));
+      back.searchParams.set('spawnLng', String(spawn.lng));
+    }
+    location.href = back.pathname + '?' + back.searchParams.toString();
   });
 
   document.getElementById('navBtn').addEventListener('click', ()=>{
@@ -543,6 +584,10 @@
     if (intent === 'transfer'){
       u.searchParams.set('arr', arrFlight);
       u.searchParams.set('dep', depFlight);
+    }
+    if (spawn) {
+      u.searchParams.set('spawnLat', String(spawn.lat));
+      u.searchParams.set('spawnLng', String(spawn.lng));
     }
 
     location.href = u.pathname + '?' + u.searchParams.toString();

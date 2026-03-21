@@ -22,10 +22,14 @@ import {
 import {
   connectAdminRealtime, type MsgRecord, type MsgStatusEvent, type PresenceEvent, type ChatMessage, type PaxTrajectoryData,
 } from "./services/realtime";
+import { normalizeLoungePathToPax } from "./services/loungeRoute";
 
 export default function App() {
-  if (typeof window !== "undefined" && window.location.pathname.startsWith("/pax")) {
-    return <PaxEntryWrapper />;
+  if (typeof window !== "undefined") {
+    normalizeLoungePathToPax();
+    if (window.location.pathname.startsWith("/pax")) {
+      return <PaxEntryWrapper />;
+    }
   }
   const [session, setSession] = useState<AdminSession | null>(() => getSession());
   if (!session) {
