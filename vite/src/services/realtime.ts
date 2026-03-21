@@ -92,8 +92,22 @@ export function connectAdminRealtime(opts: {
       if (m.type === "chat_msg") opts.onChatMsg?.(m.message);
       if (m.type === "chat_history") opts.onChatHistory?.(m.passengerId, m.messages);
       if (m.type === "chat_read") opts.onChatRead?.(m.passengerId, m.messageId, m.at);
-      if (m.type === "pax_trajectory" && m.passengerId && m.path && m.position) {
-        opts.onPaxTrajectory?.(m.passengerId, { path: m.path, position: m.position });
+      if (m.type === "pax_trajectory" && m.passengerId && m.position) {
+        const pos = m.position;
+        const lat = Number(pos.lat);
+        const lng = Number(pos.lng);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+        const pathRaw = Array.isArray(m.path) ? m.path : [];
+        const path = pathRaw.length
+          ? pathRaw.map((pt: { lat?: unknown; lng?: unknown }) => ({
+              lat: Number(pt.lat),
+              lng: Number(pt.lng),
+            })).filter((pt) => Number.isFinite(pt.lat) && Number.isFinite(pt.lng))
+          : [];
+        opts.onPaxTrajectory?.(m.passengerId, {
+          path: path.length ? path : [{ lat, lng }],
+          position: { lat, lng },
+        });
       }
     };
   };

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { resolveCanonicalPassengerId } from "../services/passengerAliases";
+import { appendSpawnParams, parseSpawnFromQuery } from "../services/passengerSpawn";
 
 function qs(name: string) {
   try { return new URL(location.href).searchParams.get(name); } catch { return null; }
@@ -17,6 +18,7 @@ type EntryPayload = {
 
 /**
  * Route: /pax?pid=TX1&tenant=airchina (PEK) or tenant=airchina_sfo (SFO)
+ * Lounge QR: /pax?pid=TX1&tenant=airchina&lounge=1 → fixed spawn on admin map (see passengerSpawn.ts)
  *
  * 1) Show uploaded login HTML (public/pax-login.html)
  * 2) When user clicks "开始导航" or sends "其它" -> login page postMessage
@@ -29,6 +31,8 @@ export default function PaxEntryWrapper() {
   }, []);
   const tenantId = useMemo(() => qs("tenant") || "airchina", []);
 
+  const spawn = useMemo(() => parseSpawnFromQuery(qs), []);
+
   const direct = useMemo(() => qs("direct") === "1" || qs("skip") === "1", []);
 
   const [iframeSrc, setIframeSrc] = useState<string>(() => {
@@ -38,11 +42,13 @@ export default function PaxEntryWrapper() {
       u.searchParams.set("pax", pid);
       u.searchParams.set("plan", "premium");
       u.searchParams.set("name", "SIYAO FU");
+      appendSpawnParams(u, spawn);
       return u.pathname + "?" + u.searchParams.toString();
     }
     const u = new URL("/pax-login.html", location.origin);
     u.searchParams.set("pid", pid);
     u.searchParams.set("tenant", tenantId);
+    appendSpawnParams(u, spawn);
     return u.pathname + "?" + u.searchParams.toString();
   });
 
@@ -69,6 +75,7 @@ export default function PaxEntryWrapper() {
         if (payload.flight) f.searchParams.set("flight", payload.flight);
         if (payload.arrivalFlight) f.searchParams.set("arr", payload.arrivalFlight);
         if (payload.departureFlight) f.searchParams.set("dep", payload.departureFlight);
+        appendSpawnParams(f, spawn);
         setIframeSrc(f.pathname + "?" + f.searchParams.toString());
         return;
       }
@@ -84,13 +91,14 @@ export default function PaxEntryWrapper() {
       if (payload.message) u.searchParams.set("q", payload.message);
       if (payload.flight) u.searchParams.set("flight", payload.flight);
       if (payload.type) u.searchParams.set("intent", payload.type);
+      appendSpawnParams(u, spawn);
 
       setIframeSrc(u.pathname + "?" + u.searchParams.toString());
     }
 
     window.addEventListener("message", onMsg);
     return () => window.removeEventListener("message", onMsg);
-  }, [pid, tenantId]);
+  }, [pid, tenantId, spawn]);
 
   return (
     <div style={{ width: "100vw", height: "100vh", background: "#0b0b0c" }}>

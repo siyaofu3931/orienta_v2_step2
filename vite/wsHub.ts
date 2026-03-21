@@ -440,7 +440,7 @@ export function attachWsHub(server: ViteDevServer | HttpServer) {
         const still = paxSockets.get(key);
         if (!still || still.size === 0) {
           setPresence(tenantId, passengerId, false);
-          paxTrajectories.delete(key);
+          // Keep last trajectory after disconnect so lounge / iframe handoff (pax-flight → pax.html) does not flicker off-map.
         }
       }
     });

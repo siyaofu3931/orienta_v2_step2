@@ -1,4 +1,5 @@
 import type { Flight, Gate, Passenger, PassengerComputed, PassengerStatus, GateStats, LatLng, PaxPlan, PaxExtStatus } from "./types";
+import { MOCK_LOUNGE_SPAWN } from "./passengerSpawn";
 import { clamp, haversineMeters, makePolyline, randPick } from "./utils";
 
 // ──────────────────────────────────────────────
@@ -275,8 +276,12 @@ export function createWorld(_gates: Gate[], _flights: Flight[], _count: number):
       // Missed - stopped near a gate or lounge
       location = clampToT3E(randomNearby(randPick(INDOOR_AMENITIES), 50));
     } else if (scenario.extStatus === "lost") {
-      // Location is approximate / unknown - show last known
-      location = clampToT3E(randomNearby(randPick(INDOOR_AMENITIES), 80));
+      // P11: demo “airport lounge QR” last-known pin (aligns with /lounge spawn + map trajectory)
+      if (profile.id === "P11") {
+        location = { lat: MOCK_LOUNGE_SPAWN.lat, lng: MOCK_LOUNGE_SPAWN.lng };
+      } else {
+        location = clampToT3E(randomNearby(randPick(INDOOR_AMENITIES), 80));
+      }
     } else if (scenario.extStatus === "offline") {
       // Offline - static position near an amenity
       location = clampToT3E(randomNearby(randPick(INDOOR_AMENITIES), 100));

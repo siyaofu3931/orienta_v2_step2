@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Orienta · Mock lounge QR</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 520px; margin: 24px auto; padding: 0 16px; color: #111; }
+    h1 { font-size: 1.25rem; }
+    p, label { font-size: 0.9rem; line-height: 1.5; color: #333; }
+    input[type="text"] { width: 100%; box-sizing: border-box; padding: 8px 10px; margin: 6px 0 14px; font-size: 14px; }
+    #qrcode { margin: 20px 0; padding: 16px; background: #fff; display: inline-block; border: 1px solid #e5e5e5; border-radius: 12px; }
+    code { font-size: 12px; word-break: break-all; background: #f4f4f5; padding: 2px 6px; border-radius: 4px; }
+    .url-out { font-size: 12px; margin-top: 12px; padding: 10px; background: #f9fafb; border-radius: 8px; border: 1px solid #eee; }
+    .hint { font-size: 0.8rem; color: #666; margin-top: -10px; margin-bottom: 14px; }
+  </style>
+</head>
+<body>
+  <h1>Mock airport lounge QR</h1>
+  <p>
+    Scanning a link like <code>/lounge?lat=…&lng=…</code> opens the same passenger flow as a boarding-pass
+    <code>/pax</code> link. If you omit <code>pid</code>, the app uses passenger <strong>P11</strong> and pins them
+    at the given coordinates on the operator map (via WebSocket <code>pax_trajectory</code>).
+  </p>
+  <label for="lat">Latitude</label>
+  <input type="text" id="lat" value="40.077095" autocomplete="off" />
+  <label for="lng">Longitude</label>
+  <input type="text" id="lng" value="116.606151" autocomplete="off" />
+  <label for="pid">Passenger id (optional — default P11 if empty)</label>
+  <p class="hint">Leave empty to match a minimal printed QR (lat/lng only).</p>
+  <input type="text" id="pid" value="" placeholder="P11" autocomplete="off" />
+  <label for="tenant">Tenant</label>
+  <input type="text" id="tenant" value="airchina" autocomplete="off" />
+  <div id="qrcode"></div>
+  <div class="url-out"><strong>URL:</strong> <span id="urlText"></span></div>
+  <script>
+    var qr;
+    function buildUrl() {
+      var u = new URL("/lounge", location.origin);
+      u.searchParams.set("lat", document.getElementById("lat").value.trim() || "40.077095");
+      u.searchParams.set("lng", document.getElementById("lng").value.trim() || "116.606151");
+      var pid = document.getElementById("pid").value.trim();
+      if (pid) u.searchParams.set("pid", pid);
+      u.searchParams.set("tenant", document.getElementById("tenant").value.trim() || "airchina");
+      return u.toString();
+    }
+    function render() {
+      var text = buildUrl();
+      document.getElementById("urlText").textContent = text;
+      document.getElementById("qrcode").innerHTML = "";
+      qr = new QRCode(document.getElementById("qrcode"), { text: text, width: 220, height: 220 });
+    }
+    document.getElementById("lat").addEventListener("input", render);
+    document.getElementById("lng").addEventListener("input", render);
+    document.getElementById("pid").addEventListener("input", render);
+    document.getElementById("tenant").addEventListener("input", render);
+    render();
+  </script>
+</body>
+</html>
