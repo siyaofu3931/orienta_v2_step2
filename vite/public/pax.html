@@ -87,9 +87,15 @@
 </div>
 
 <script>
+function resolveCanonicalPassengerId(raw) {
+  const s = (raw || "").trim();
+  if (!s) return "";
+  var m = { DA8X3: "TX1", DB5K7: "TX2", DC2N9: "TX3" };
+  return m[s.toUpperCase()] || s;
+}
 const params = new URLSearchParams(location.search);
 const tenantId   = params.get("tenant") || "airchina";
-const passengerId = params.get("pax")   || "TX1";
+const passengerId = resolveCanonicalPassengerId(params.get("pax") || "TX1") || "TX1";
 
 // Passenger profiles (mirror of passengerSim scenarios)
 const PAX_DATA = {

@@ -122,8 +122,15 @@
 
 <script>
 (function(){
+  function resolveCanonicalPassengerId(raw) {
+    const s = (raw || "").trim();
+    if (!s) return "";
+    var m = { DA8X3: "TX1", DB5K7: "TX2", DC2N9: "TX3" };
+    return m[s.toUpperCase()] || s;
+  }
   const qs = (k) => new URL(location.href).searchParams.get(k);
-  const pid = qs('pid') || qs('pax') || 'TX1';
+  const rawPid = qs('pid') || qs('pax') || 'TX1';
+  const pid = resolveCanonicalPassengerId(rawPid) || rawPid;
   const tenant = qs('tenant') || 'airchina_sfo';
   const plan = qs('plan') || 'free';
   const name = qs('name') || (plan === 'premium' ? 'SIYAO FU' : 'Guest');

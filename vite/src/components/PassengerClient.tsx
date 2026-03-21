@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import type { Gate, Flight, PassengerComputed } from "../services/types";
 import { buildT3EGates, buildIntlFlights, createWorld, stepWorld, computePassenger, T3E_SPINE_CENTER } from "../services/passengerSim";
 import { connectPaxRealtime, type MsgRecord, type ChatMessage } from "../services/realtime";
+import { resolveCanonicalPassengerId } from "../services/passengerAliases";
 
 function qs(name: string) {
   try { return new URL(location.href).searchParams.get(name); } catch { return null; }
@@ -140,9 +141,10 @@ function RouteMap({ pax, gate }: { pax: PassengerComputed | null; gate: Gate | n
 
 export default function PassengerClient() {
   const tenantId = "airchina";
-  const [passengerId, setPassengerId] = useState<string>(
-    () => qs("pid") || localStorage.getItem("orienta_pax_pid") || "TX1"
-  );
+  const [passengerId, setPassengerId] = useState<string>(() => {
+    const raw = qs("pid") || localStorage.getItem("orienta_pax_pid") || "TX1";
+    return resolveCanonicalPassengerId(raw) || raw;
+  });
 
   const gates = useMemo(() => buildT3EGates(), []);
   const flights = useMemo(() => buildIntlFlights(), []);
