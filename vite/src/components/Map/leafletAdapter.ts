@@ -83,6 +83,8 @@ export default class LeafletAdapter {
   private staticRoutePolylines: L.Polyline[] = [];
   private opts!: CreateOptions;
   private lastData: Parameters<LeafletAdapter["setData"]>[0] | null = null;
+  /** Avoid re-flying every sim tick — only when operator selects a different passenger. */
+  private lastCameraFollowPassengerId: string | null = null;
 
   static async create(container: HTMLElement, opts: CreateOptions): Promise<LeafletAdapter> {
     const inst = new LeafletAdapter();
@@ -121,20 +123,11 @@ export default class LeafletAdapter {
     return inst;
   }
 
-  /** Call this whenever the map container becomes visible (tab switch) */
+  /** After the container gets a real size (e.g. map tab shown). Does not change zoom/center — avoid fighting user pan/zoom. */
   invalidate() {
     setTimeout(() => {
       this.map.invalidateSize();
-      if (this.lastData) {
-        const sr = this.lastData.staticRoutes;
-        this._fitAll(
-          this.lastData.gates,
-          this.lastData.passengers,
-          sr?.length ? sr : undefined
-        );
-        // Re-apply setData so static route is drawn now that map has size
-        this.setData(this.lastData);
-      }
+      if (this.lastData) this.setData(this.lastData);
     }, 50);
   }
 
@@ -251,6 +244,22 @@ export default class LeafletAdapter {
     // On first data load: fit bounds (include static route so it's in view)
     if (isFirstLoad) {
       this._fitAll(gates, passengers, staticRoutes.length ? staticRoutes : undefined);
+    }
+
+    const selId = data.selectedPassengerId;
+    if (selId && selId !== this.lastCameraFollowPassengerId) {
+      const pax = passengers.find((p) => p.id === selId);
+      if (pax) {
+        const z = Math.min(18, Math.max(this.map.getZoom(), 17));
+        try {
+          this.map.flyTo([pax.location.lat, pax.location.lng], z, { duration: 0.55, easeLinearity: 0.22 });
+        } catch {
+          this.map.setView([pax.location.lat, pax.location.lng], z);
+        }
+      }
+      this.lastCameraFollowPassengerId = selId;
+    } else if (!selId) {
+      this.lastCameraFollowPassengerId = null;
     }
   }
 }

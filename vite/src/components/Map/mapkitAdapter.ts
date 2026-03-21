@@ -49,6 +49,7 @@ export default class MapKitAdapter {
   private paxData = new Map<string, PassengerComputed>();
   private repositionTimer: any = null;
   private overlays: any[] = [];
+  private lastCameraFollowPassengerId: string | null = null;
 
   static async preload() {
     // Apple CDN - you can lock a version if desired
@@ -215,7 +216,7 @@ export default class MapKitAdapter {
     selectedGateId: string | null;
     selectedPassengerId: string | null;
   }) {
-    const { gates, passengers, tracks, staticRoutes = [] } = data;
+    const { gates, passengers, tracks, staticRoutes = [], selectedPassengerId } = data;
 
     // --- Gates
     const keepGate = new Set(gates.map((g) => g.id));
@@ -311,6 +312,25 @@ export default class MapKitAdapter {
       if (typeof (this.map as any).addOverlay === "function") (this.map as any).addOverlay(pl);
       else if (typeof (this.map as any).addOverlays === "function") (this.map as any).addOverlays([pl]);
       this.overlays.push(pl);
+    }
+
+    if (selectedPassengerId && selectedPassengerId !== this.lastCameraFollowPassengerId) {
+      const pax = passengers.find((p) => p.id === selectedPassengerId);
+      if (pax) {
+        const center = toCoord(this.mapkit, pax.location);
+        const span = new this.mapkit.CoordinateSpan(0.004, 0.006);
+        const region = new this.mapkit.CoordinateRegion(center, span);
+        try {
+          if (typeof (this.map as any).setRegionAnimated === "function") {
+            (this.map as any).setRegionAnimated(region, true);
+          } else {
+            this.map.region = region;
+          }
+        } catch {}
+      }
+      this.lastCameraFollowPassengerId = selectedPassengerId;
+    } else if (!selectedPassengerId) {
+      this.lastCameraFollowPassengerId = null;
     }
   }
 }
