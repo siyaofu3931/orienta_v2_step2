@@ -158,20 +158,30 @@ export default function MapView(props: {
     };
   }, [effectiveProvider, mapkitAvailable, center.lat, center.lng]); // eslint-disable-line
 
-  // Update data on every tick
+  // Update markers/routes on every sim tick — do not call invalidate() here (invalidate refits / was resetting zoom on each payload change).
   useEffect(() => {
     adapterRef.current?.setData(payload);
   }, [payload]);
 
-  // When tab becomes visible: re-apply data so route/layers draw correctly (map may have been zero-size before)
+  // When map tab becomes visible: Leaflet needs invalidateSize after display:none. Do not run on every payload tick.
+  const mapTabWasVisibleRef = useRef(false);
   useEffect(() => {
-    if (props.visible && adapterRef.current) {
-      adapterRef.current.setData(payload);
+    if (!props.visible) {
+      mapTabWasVisibleRef.current = false;
+      return;
+    }
+    const justShown = !mapTabWasVisibleRef.current;
+    mapTabWasVisibleRef.current = true;
+    if (!justShown) return;
+    const runInv = () => {
       if (adapterRef.current instanceof LeafletAdapter) {
         (adapterRef.current as LeafletAdapter).invalidate();
       }
-    }
-  }, [props.visible, payload]);
+    };
+    runInv();
+    const tid = window.setTimeout(runInv, 120);
+    return () => clearTimeout(tid);
+  }, [props.visible]);
 
   return (
     <div className="orienta-map-frame" style={{ width: "100%", height: "100%", minHeight: 0, position: "relative" }}>
