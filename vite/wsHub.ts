@@ -2,6 +2,7 @@ import type { ViteDevServer } from "vite";
 import type { Server as HttpServer } from "node:http";
 import { WebSocketServer, type WebSocket } from "ws";
 import crypto from "node:crypto";
+import { resolveCanonicalPassengerId } from "./src/services/passengerAliases";
 
 type Role = "admin" | "pax";
 export type MsgStatus = "sent" | "delivered" | "ack";
@@ -164,7 +165,7 @@ export function attachWsHub(server: ViteDevServer | HttpServer) {
         clearTimeout(helloTimeout);
         role = msg.role;
         tenantId = msg.tenantId;
-        if (role === "pax") passengerId = msg.passengerId;
+        if (role === "pax") passengerId = resolveCanonicalPassengerId(String(msg.passengerId ?? ""));
 
         if (!tenantId) { ws.close(1008, "missing tenant"); return; }
 
@@ -249,10 +250,11 @@ export function attachWsHub(server: ViteDevServer | HttpServer) {
 
       // === ADMIN: send one-way push message ===
       if (role === "admin" && msg.type === "send") {
-        if (!msg.passengerId || !msg.body) return;
+        const targetPid = resolveCanonicalPassengerId(String(msg.passengerId ?? ""));
+        if (!targetPid || !msg.body) return;
         const id = msg.messageId || crypto.randomUUID();
         const rec: MsgRecord = {
-          messageId: id, tenantId, passengerId: msg.passengerId,
+          messageId: id, tenantId, passengerId: targetPid,
           title: msg.title || "Orienta 通知", body: msg.body,
           createdAt: Date.now(), status: "sent"
         };
@@ -282,7 +284,8 @@ export function attachWsHub(server: ViteDevServer | HttpServer) {
 
       // === ADMIN: send chat message to passenger ===
       if (role === "admin" && msg.type === "chat_send") {
-        const { passengerId: pid, body, kind = "text", gateRef } = msg;
+        const pid = resolveCanonicalPassengerId(String(msg.passengerId ?? ""));
+        const { body, kind = "text", gateRef } = msg;
         if (!pid || !body) return;
         const chatMsg: ChatMessage = {
           id: crypto.randomUUID(), passengerId: pid, tenantId,
@@ -378,7 +381,7 @@ export function attachWsHub(server: ViteDevServer | HttpServer) {
 
       // === ADMIN: request passenger location ===
       if (role === "admin" && msg.type === "loc_request") {
-        const { passengerId: pid } = msg;
+        const pid = resolveCanonicalPassengerId(String(msg.passengerId ?? ""));
         if (!pid) return;
         const sysMsg: ChatMessage = {
           id: crypto.randomUUID(), passengerId: pid, tenantId,
@@ -414,7 +417,9 @@ export function attachWsHub(server: ViteDevServer | HttpServer) {
 
       // === ADMIN or PAX: fetch chat history ===
       if (msg.type === "chat_fetch") {
-        const pid = (role === "pax" ? passengerId : msg.passengerId) || passengerId;
+        const pid = role === "pax"
+          ? passengerId
+          : resolveCanonicalPassengerId(String(msg.passengerId ?? ""));
         if (!pid) return;
         const hist = getChatHistory(tenantId, pid).slice(-20);
         wsSend(ws, { type: "chat_history", passengerId: pid, messages: hist });

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { resolveCanonicalPassengerId } from "../services/passengerAliases";
 
 function qs(name: string) {
   try { return new URL(location.href).searchParams.get(name); } catch { return null; }
@@ -22,7 +23,10 @@ type EntryPayload = {
  * 3) Load legacy passenger page (public/pax.html) inside same iframe (keeps /pax URL)
  */
 export default function PaxEntryWrapper() {
-  const pid = useMemo(() => qs("pid") || qs("pax") || "TX1", []);
+  const pid = useMemo(() => {
+    const raw = qs("pid") || qs("pax") || "TX1";
+    return resolveCanonicalPassengerId(raw) || raw;
+  }, []);
   const tenantId = useMemo(() => qs("tenant") || "airchina", []);
 
   const direct = useMemo(() => qs("direct") === "1" || qs("skip") === "1", []);
