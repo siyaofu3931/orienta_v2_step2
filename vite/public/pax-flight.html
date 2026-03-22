@@ -615,6 +615,8 @@
     const g = gatesForRouteVideo();
     if (g.fromGate) u.searchParams.set('gateFrom', g.fromGate);
     if (g.toGate) u.searchParams.set('gateTo', g.toGate);
+    // Open 视频页 immediately so route_site loads & syncs TX* position to back office
+    u.searchParams.set('view', 'video');
     if (intent === 'transfer' && transfer && transfer.hub_airport) {
       u.searchParams.set('hub', String(transfer.hub_airport).toUpperCase());
     } else if (single && single.instance) {

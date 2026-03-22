@@ -113,6 +113,42 @@ export function attachWsHub(server: ViteDevServer | HttpServer) {
   // PDR / live trajectory from pax (e.g. PDR_AIRCHINA), keyed by `${tenantId}::${passengerId}`
   const paxTrajectories = new Map<string, { path: { lat: number; lng: number }[]; position: { lat: number; lng: number } }>();
 
+  function storeAndBroadcastTrajectory(
+    tid: string,
+    rawPassengerId: string,
+    pathRaw: any[],
+    position: { lat: number; lng: number } | null
+  ): boolean {
+    const pid = resolveCanonicalPassengerId(String(rawPassengerId ?? ""));
+    if (!pid || !tid) return false;
+    const key = `${tid}::${pid}`;
+    const prev = paxTrajectories.get(key);
+    const pathPoints = normalizeTrajectoryPath(pathRaw);
+    const path = pathPoints.length > 0 ? pathPoints : (prev?.path || []);
+    const pos =
+      position && Number.isFinite(position.lat) && Number.isFinite(position.lng)
+        ? position
+        : (prev?.position ?? null);
+    if (!pos) return false;
+    const data = { path: path.length > 0 ? path : [pos], position: pos };
+    paxTrajectories.set(key, data);
+    broadcastAdmins(tid, { type: "pax_trajectory", tenantId: tid, passengerId: pid, path: data.path, position: data.position });
+    return true;
+  }
+
+  function clearStoredTrajectory(tid: string, rawPassengerId: string): boolean {
+    const pid = resolveCanonicalPassengerId(String(rawPassengerId ?? ""));
+    if (!pid || !tid) return false;
+    const key = `${tid}::${pid}`;
+    if (!paxTrajectories.delete(key)) return false;
+    broadcastAdmins(tid, { type: "pax_trajectory_clear", tenantId: tid, passengerId: pid });
+    return true;
+  }
+
+  routeSitePushImpl = (a) =>
+    storeAndBroadcastTrajectory(a.tenantId, a.passengerId, a.path || [], { lat: a.lat, lng: a.lng });
+  routeSiteClearImpl = (tid, pid) => clearStoredTrajectory(tid, pid);
+
   const wss = new WebSocketServer({ noServer: true });
 
   httpServer.on("upgrade", (req, socket, head) => {

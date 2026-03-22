@@ -68,6 +68,8 @@ export type Passenger = {
   lastUpdateMs?: number;
   extStatus: PaxExtStatus;
   locationLostAt?: number;
+  /** When set, sidebar shows this instead of static sim gate (live route from pax video). */
+  liveVideoGateHint?: string;
 };
 
 export type PassengerStatus = "green" | "yellow" | "red" | "gray";
