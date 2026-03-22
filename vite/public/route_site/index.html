@@ -719,8 +719,8 @@ const FROM_LABEL      = "E10";
 const TARGET_LABEL    = "F20";
 const TARGET_HINT_SEC = 531.000;
 // Video is on main walkway: dot starts/ends at junction, not at gate
-const DOT_START_OFFSET = 0.1000;
-const DOT_END_OFFSET   = 0.1000;
+const DOT_START_OFFSET = 0.0000;
+const DOT_END_OFFSET   = 0.0000;
 
 /** Progress along indoor path (rawRatio 0..1) -> position on geographic polyline by arc length in lon/lat. Keeps map dot aligned with video vs sparse waypoints. */
 function orientaMapSplitFromPathProgress_(path, rawRatio, dotStart, dotEnd) {
@@ -997,6 +997,20 @@ function pushTouristPositionToBackend() {
       })
     }).catch(function () {});
   } catch (e) {}
+  // Same path as spawn: parent /pax.html relays pax_trajectory on WS (reliable in nested iframes; HTTP can fail silently).
+  try {
+    if (window.parent && window.parent !== window) {
+      var pathForWs = pathPayload && pathPayload.length ? pathPayload : [{ lat: pos.lat, lng: pos.lng }];
+      window.parent.postMessage(
+        {
+          type: "orienta-pax-trajectory",
+          position: { lat: pos.lat, lng: pos.lng },
+          path: pathForWs
+        },
+        window.location.origin
+      );
+    }
+  } catch (e2) {}
 }
 // Push on timeline changes (not only a 2s timer): duration was 0 before loadedmetadata, and checkpoints pause the video.
 var orientaLastTouristPushMs_ = 0;
@@ -1024,6 +1038,16 @@ if (ROUTE_SITE_PASSENGER_ID && PATH_LONLAT && PATH_LONLAT.length >= 2) {
     });
   }
 }
+
+// Parent (/pax.html) asks for an immediate sync when 视频页 becomes visible.
+window.addEventListener("message", function (e) {
+  if (e.origin !== window.location.origin) return;
+  var d = e.data;
+  if (d && d.type === "orienta-push-tourist") {
+    orientaLastTouristPushMs_ = 0;
+    pushTouristPositionToBackend();
+  }
+});
 
 // Deactivate tourist when user closes/leaves the page so backoffice stops showing them.
 // Use text/plain body to avoid CORS preflight (which is often cancelled on tab close).

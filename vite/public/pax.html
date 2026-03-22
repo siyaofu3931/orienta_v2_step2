@@ -180,25 +180,51 @@ const gateToNav = (params.get("gateTo") || "").trim();
   }
 })();
 
+function buildRouteSiteIframeSrc() {
+  let src =
+    "/route_site/index.html?airport=" +
+    encodeURIComponent(routeSiteAirport) +
+    "&tenant=" +
+    encodeURIComponent(tenantId) +
+    "&pax=" +
+    encodeURIComponent(passengerId);
+  if (gateFromNav && gateToNav) {
+    src +=
+      "&gateFrom=" +
+      encodeURIComponent(gateFromNav) +
+      "&gateTo=" +
+      encodeURIComponent(gateToNav);
+  }
+  return src;
+}
+
+function pingRouteSiteTouristPush() {
+  const iframe = document.getElementById("routeSiteFrame");
+  if (!iframe || !iframe.contentWindow) return;
+  try {
+    iframe.contentWindow.postMessage({ type: "orienta-push-tourist" }, location.origin);
+  } catch (e) {}
+}
+
+/** Nudge back-office sync when 视频页 is shown (route_site is always loaded — do not leave iframe on about:blank). */
+function onVideoTabShown() {
+  pingRouteSiteTouristPush();
+  requestAnimationFrame(function () {
+    pingRouteSiteTouristPush();
+  });
+  setTimeout(pingRouteSiteTouristPush, 400);
+  setTimeout(pingRouteSiteTouristPush, 1200);
+}
+
 (function initRouteSiteFrame() {
   const iframe = document.getElementById("routeSiteFrame");
   const body = document.getElementById("videoHintBody");
   if (iframe) {
-    let src =
-      "/route_site/index.html?airport=" +
-      encodeURIComponent(routeSiteAirport) +
-      "&tenant=" +
-      encodeURIComponent(tenantId) +
-      "&pax=" +
-      encodeURIComponent(passengerId);
-    if (gateFromNav && gateToNav) {
-      src +=
-        "&gateFrom=" +
-        encodeURIComponent(gateFromNav) +
-        "&gateTo=" +
-        encodeURIComponent(gateToNav);
-    }
-    iframe.src = src;
+    iframe.src = buildRouteSiteIframeSrc();
+    iframe.addEventListener("load", function orientaRouteSiteFirstLoad() {
+      pingRouteSiteTouristPush();
+      setTimeout(pingRouteSiteTouristPush, 500);
+    });
   }
   if (body) {
     body.textContent =
@@ -243,6 +269,26 @@ if (isPremium) document.getElementById("inputArea").style.display = "flex";
 // ─── WebSocket ─────────────────────────────────────────────────
 let ws = null;
 let reconnTimer = null;
+
+// route_site iframe → live map on back office (same channel as spawn pax_trajectory)
+window.addEventListener("message", function (ev) {
+  if (ev.origin !== location.origin) return;
+  const d = ev.data;
+  if (!d || d.type !== "orienta-pax-trajectory") return;
+  const sock = ws;
+  if (!sock || sock.readyState !== WebSocket.OPEN) return;
+  const pos = d.position;
+  if (!pos || typeof pos.lat !== "number" || typeof pos.lng !== "number") return;
+  let path = Array.isArray(d.path) ? d.path : [];
+  if (!path.length) path = [{ lat: pos.lat, lng: pos.lng }];
+  try {
+    sock.send(JSON.stringify({
+      type: "pax_trajectory",
+      path: path,
+      position: { lat: pos.lat, lng: pos.lng }
+    }));
+  } catch (e) {}
+});
 
 function wsUrl() {
   const proto = location.protocol === "https:" ? "wss" : "ws";
@@ -397,6 +443,7 @@ function setMainView(mode) {
   tVideo.classList.toggle("active", !isChat);
   tChat.setAttribute("aria-selected", isChat ? "true" : "false");
   tVideo.setAttribute("aria-selected", isChat ? "false" : "true");
+  if (!isChat) onVideoTabShown();
 }
 
 document.getElementById("tabChat").addEventListener("click", function () { setMainView("chat"); });
