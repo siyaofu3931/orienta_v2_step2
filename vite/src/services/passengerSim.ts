@@ -1,5 +1,4 @@
 import type { Flight, Gate, Passenger, PassengerComputed, PassengerStatus, GateStats, LatLng, PaxPlan, PaxExtStatus } from "./types";
-import { MOCK_LOUNGE_SPAWN } from "./passengerSpawn";
 import { clamp, haversineMeters, makePolyline, randPick } from "./utils";
 
 // ──────────────────────────────────────────────
@@ -149,7 +148,7 @@ const PROFILES = [
 // ──────────────────────────────────────────────
 type PaxScenario = {
   extStatus: PaxExtStatus;
-  activity: "moving" | "shopping" | "dining" | "idle" | "at_gate" | "boarded";
+  activity: "moving" | "shopping" | "dining" | "idle" | "at_gate" | "boarded" | "lounge";
   outboundIdx: number; // index into INTL_OUTBOUND_FLIGHTS
   inboundIdx: number;  // index into INTL_INBOUND_FLIGHTS
   note: string;
@@ -276,12 +275,8 @@ export function createWorld(_gates: Gate[], _flights: Flight[], _count: number):
       // Missed - stopped near a gate or lounge
       location = clampToT3E(randomNearby(randPick(INDOOR_AMENITIES), 50));
     } else if (scenario.extStatus === "lost") {
-      // P11: demo “airport lounge QR” last-known pin (aligns with /lounge spawn + map trajectory)
-      if (profile.id === "P11") {
-        location = { lat: MOCK_LOUNGE_SPAWN.lat, lng: MOCK_LOUNGE_SPAWN.lng };
-      } else {
-        location = clampToT3E(randomNearby(randPick(INDOOR_AMENITIES), 80));
-      }
+      // Lost passengers: random pin inside T3E (P11: offline until lounge QR; map uses sim pin, not stale WS trajectory)
+      location = clampToT3E(randomNearby(randPick(INDOOR_AMENITIES), 80));
     } else if (scenario.extStatus === "offline") {
       // Offline - static position near an amenity
       location = clampToT3E(randomNearby(randPick(INDOOR_AMENITIES), 100));
@@ -426,6 +421,7 @@ export function computePassenger(p: Passenger, flight: Flight | null, gate: Gate
 
   if (p.activity === "shopping") reason = status === "green" ? "🛍️ Shopping (time OK)" : "🛍️ Shopping (time tight!)";
   else if (p.activity === "dining") reason = status === "green" ? "🍜 Dining (time OK)" : "🍜 Dining (leave now!)";
+  else if (p.activity === "lounge") reason = status === "green" ? "☕ In lounge (time OK)" : status === "yellow" ? "☕ In lounge (leave soon)" : "☕ In lounge (at risk — go to gate)";
   else if (p.activity === "idle") reason = status === "green" ? "💺 Resting" : "💺 Resting (move now!)";
 
   if (p.needsWheelchair) reason += " · ♿ Wheelchair";
@@ -440,7 +436,7 @@ export function computeGateStats(passengers: PassengerComputed[], gateId: string
     boarded: ps.filter(p => p.activity === "boarded").length,
     atGateWaiting: ps.filter(p => p.activity === "at_gate").length,
     enRoute: ps.filter(p => p.activity === "moving").length,
-    notMoving: ps.filter(p => ["shopping", "dining", "idle"].includes(p.activity)).length,
+    notMoving: ps.filter(p => ["shopping", "dining", "idle", "lounge"].includes(p.activity)).length,
   };
 }
 
