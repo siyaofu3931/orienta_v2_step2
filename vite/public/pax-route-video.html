@@ -22,7 +22,7 @@
       border-bottom: 1px solid var(--line);
       background: #121214;
     }
-    .brand-logo { height: 36px; width: auto; max-width: min(180px, 42vw); object-fit: contain; }
+    .brand-logo { height: 70px; width: auto; max-width: min(360px, 62vw); object-fit: contain; flex-shrink: 0; }
     .top-mid { flex: 1; min-width: 0; }
     .route-line { font-size: 14px; font-weight: 800; }
     .route-line .gate { color: var(--blue); }
@@ -47,11 +47,11 @@
 <body>
   <div class="shell">
     <div class="top">
-      <button type="button" class="btn-back" id="backBtn">返回</button>
       <img class="brand-logo" src="/airchina-logo.png" alt="Air China" />
+      <button type="button" class="btn-back" id="backBtn">返回</button>
       <div class="top-mid">
         <div class="route-line" id="routeLine">抵达登机口 <span class="gate" id="fromG">—</span> → 出发登机口 <span class="gate" id="toG">—</span></div>
-        <div class="hint" id="routeHint">首都机场 PEK：使用 pek_videoroute_E.mp4 与 PEK_gate_timestamp.csv；室外地图轨迹可能仍为演示数据。</div>
+        <div class="hint" id="routeHint" hidden></div>
       </div>
     </div>
     <div class="frame-wrap">
@@ -89,10 +89,13 @@
       }
       const hint = document.getElementById("routeHint");
       if (hint) {
-        hint.textContent =
-          ap === "PEK"
-            ? "首都机场 PEK：pek_videoroute_E.mp4 + PEK_gate_timestamp.csv；室外地图可能仍为演示轨迹。"
-            : "旧金山 SFO T1 演示资源。";
+        if (ap === "PEK") {
+          hint.textContent = "";
+          hint.hidden = true;
+        } else {
+          hint.textContent = "旧金山 SFO T1 演示资源。";
+          hint.hidden = false;
+        }
       }
       document.getElementById("fromG").textContent = fromGate;
       document.getElementById("toG").textContent = toGate;

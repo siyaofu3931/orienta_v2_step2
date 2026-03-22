@@ -37,11 +37,17 @@
       border-top:4px solid var(--ac-red);
     }
     .wrap{max-width:980px;margin:0 auto;padding:14px;}
-    .brand-bar{display:flex;justify-content:center;align-items:center;padding:10px 0 6px;margin:0 0 4px;}
-    .brand-logo{height:48px;width:auto;max-width:min(220px,78vw);object-fit:contain;display:block;}
-    .top{
-      display:flex;align-items:center;justify-content:space-between;gap:12px;
-      margin:8px 0 12px;
+    .page-header{
+      display:flex;align-items:center;justify-content:flex-start;gap:14px;
+      margin:6px 0 12px;flex-wrap:wrap;
+    }
+    .brand-logo{
+      height:76px;width:auto;max-width:min(380px,82vw);object-fit:contain;display:block;flex-shrink:0;
+    }
+    .page-header-main{flex:1;min-width:min(100%,200px);}
+    .page-header .pill{margin-left:auto;flex-shrink:0;}
+    @media(max-width:520px){
+      .page-header .pill{margin-left:0;width:100%;}
     }
     .title{font-size:18px;font-weight:800;}
     .sub{font-size:12px;color:var(--muted);margin-top:2px;}
@@ -83,16 +89,14 @@
 </head>
 <body>
   <div class="wrap">
-    <div class="brand-bar">
+    <header class="page-header">
       <img class="brand-logo" src="/airchina-logo.png" alt="Air China" />
-    </div>
-    <div class="top">
-      <div>
+      <div class="page-header-main">
         <div class="title" id="hdrTitle">航班信息</div>
         <div class="sub" id="hdrSub">—</div>
       </div>
       <div class="pill" id="whoPill">—</div>
-    </div>
+    </header>
 
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">

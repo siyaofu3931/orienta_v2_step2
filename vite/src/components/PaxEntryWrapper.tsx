@@ -53,7 +53,6 @@ export default function PaxEntryWrapper() {
     () => qs("direct") === "1" || qs("skip") === "1" || qs("demo") === "1",
     []
   );
-  const startAtLogin = !skipToPaxHtml;
 
   const [iframeSrc, setIframeSrc] = useState<string>(() => {
     if (skipToPaxHtml) {
@@ -131,25 +130,6 @@ export default function PaxEntryWrapper() {
           "linear-gradient(180deg, #c8102e 0px, #c8102e 4px, transparent 4px), linear-gradient(180deg, #f5f6fa 0%, #e8ecf2 50%, #dde2ea 100%)",
       }}
     >
-      <div
-        style={{
-          flexShrink: 0,
-          padding: "9px 14px",
-          fontSize: 12,
-          fontWeight: 700,
-          letterSpacing: 0.2,
-          color: "#2d2d2d",
-          background: "rgba(255,255,255,0.92)",
-          borderBottom: "1px solid rgba(200,16,46,0.18)",
-          textAlign: "center",
-          boxShadow: "0 1px 0 rgba(255,255,255,0.8)",
-        }}
-      >
-        前端 Demo · 旅客端界面预览
-        {startAtLogin
-          ? "（完整流程：登录 → 航班信息 → 开始导航 → 对话 / 视频页）"
-          : "（快捷预览：已跳过登录与航班页；去掉 ?direct=1 / ?demo=1 可恢复完整流程）"}
-      </div>
       <iframe
         title="Passenger"
         src={iframeSrc}

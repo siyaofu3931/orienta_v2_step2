@@ -25,8 +25,8 @@
     background: var(--page);
     border-top: 4px solid var(--ac-red);
   }
-  .brand-bar { display: flex; justify-content: center; align-items: center; padding: 12px 16px 10px; background: var(--surface); border-bottom: 1px solid var(--line); flex-shrink: 0; box-shadow: 0 1px 0 rgba(255,255,255,0.9); }
-  .brand-logo { height: 44px; width: auto; max-width: min(200px, 75vw); object-fit: contain; display: block; }
+  .brand-bar { display: flex; justify-content: flex-start; align-items: center; padding: 12px 16px 10px; background: var(--surface); border-bottom: 1px solid var(--line); flex-shrink: 0; box-shadow: 0 1px 0 rgba(255,255,255,0.9); }
+  .brand-logo { height: 76px; width: auto; max-width: min(380px, 88vw); object-fit: contain; display: block; }
   .view-tabs { display: flex; gap: 8px; padding: 10px 16px; background: rgba(255,255,255,0.65); border-bottom: 1px solid var(--line); flex-shrink: 0; }
   .view-tab {
     flex: 1; border: 1px solid var(--line); background: var(--surface); color: var(--muted);
@@ -229,7 +229,7 @@ function onVideoTabShown() {
   if (body) {
     body.textContent =
       routeSiteAirport === "PEK"
-        ? "首都机场 PEK：室内页使用 pek_videoroute_E.MP4 与 PEK_gate_timestamp.csv（路径 vite/public/route_site/；Linux 下扩展名大小写须一致）。室外地图轨迹仍为 SFO 演示坐标。"
+        ? ""
         : "当前为旧金山 SFO T1 演示资源（视频与时间轴）。";
   }
 })();
