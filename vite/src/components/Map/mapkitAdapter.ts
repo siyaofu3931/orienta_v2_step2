@@ -142,6 +142,7 @@ export default class MapKitAdapter {
       p.activity === "moving" ? "在路上" :
       p.activity === "shopping" ? "购物区" :
       p.activity === "dining" ? "餐饮区" :
+      p.activity === "lounge" ? "休息室" :
       p.activity === "idle" ? "停留" :
       p.activity === "at_gate" ? "已到登机口" : "已登机";
     const xfer = p.transfer ? ` · 中转(${p.transfer.urgency === "urgent" ? "紧急" : "正常"})` : "";

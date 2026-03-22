@@ -99,7 +99,7 @@ export default function GateCard(props: {
                 {p.needsWheelchair ? <span className="small">♿</span> : null}
                 {p.plan === "premium" ? <span className="small">💎 Premium</span> : null}
               </span>
-              <span className="small">{p.activity === "moving" ? "在路上" : p.activity === "shopping" ? "购物" : p.activity === "dining" ? "餐饮" : p.activity === "idle" ? "停留" : p.activity === "at_gate" ? "已到口" : "已登机"}</span>
+              <span className="small">{p.activity === "moving" ? "在路上" : p.activity === "shopping" ? "购物" : p.activity === "dining" ? "餐饮" : p.activity === "lounge" ? "休息室" : p.activity === "idle" ? "停留" : p.activity === "at_gate" ? "已到口" : "已登机"}</span>
             </button>
           ))}
         {passengers.filter(p => p.gateId === gate.id).length > 12 ? (

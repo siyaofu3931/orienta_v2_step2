@@ -21,6 +21,9 @@ export default function PassengerCard(props: {
 
   const statusColor = { green: "#34c759", yellow: "#ffcc00", red: "#ff3b30", gray: "#8e8e93" }[p.status] || "#8e8e93";
 
+  const activityLabel = (a: string) =>
+    a === "lounge" ? "lounge (休息室)" : a;
+
   const extBadge = () => {
     if (p.extStatus === "missed") return { label: "❌ Missed", color: "#8e8e93" };
     if (p.extStatus === "offline") return { label: "📵 Offline", color: "#636366" };
@@ -82,7 +85,7 @@ export default function PassengerCard(props: {
       <div className="row">
         <div className="kv">
           <div className="k">Activity</div>
-          <div className="v">{p.activity}</div>
+          <div className="v">{activityLabel(p.activity)}</div>
         </div>
         <div className="kv">
           <div className="k">Online</div>

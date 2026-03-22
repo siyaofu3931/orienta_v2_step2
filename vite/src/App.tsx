@@ -23,6 +23,7 @@ import {
   connectAdminRealtime, type MsgRecord, type MsgStatusEvent, type PresenceEvent, type ChatMessage, type PaxTrajectoryData,
 } from "./services/realtime";
 import { normalizeLoungePathToPax } from "./services/loungeRoute";
+import { MOCK_LOUNGE_SPAWN } from "./services/passengerSpawn";
 
 export default function App() {
   if (typeof window !== "undefined") {
@@ -273,8 +274,61 @@ function Dashboard({ session, onLogout }: { session: AdminSession; onLogout(): v
       const computed: PassengerComputed = { ...computed0, extStatus };
       (computed as any).rtOnline = isOnline;
 
+      // P11 (Isabella): offline → lost + random T3 sim pin; ignore stale trajectory after disconnect
+      if (p.id === "P11" && !isOnline) {
+        const lostComputed = computePassenger(
+          { ...p, extStatus: "lost" as PaxExtStatus, activity: "idle", location: p.location },
+          flight,
+          gate
+        );
+        return {
+          ...lostComputed,
+          extStatus: "lost" as PaxExtStatus,
+          activity: "idle",
+          location: p.location as LatLng,
+          path: undefined,
+          liveVideoGateHint: undefined,
+          rtOnline: false,
+        } as PassengerComputed;
+      }
+
+      // P11 online: always lounge pin (default MOCK_LOUNGE_SPAWN; QR spawn uses first short trajectory fix)
+      if (p.id === "P11" && isOnline) {
+        const trajPath = trajectory?.path;
+        const pathLen = Array.isArray(trajPath) ? trajPath.length : 0;
+        const pos = trajectory?.position;
+        const posOk =
+          pos &&
+          typeof pos.lat === "number" &&
+          typeof pos.lng === "number" &&
+          Number.isFinite(pos.lat) &&
+          Number.isFinite(pos.lng);
+        const shortSpawn = posOk && (pathLen === 0 || pathLen <= 2);
+        const loc: LatLng = shortSpawn
+          ? { lat: pos!.lat, lng: pos!.lng }
+          : { lat: MOCK_LOUNGE_SPAWN.lat, lng: MOCK_LOUNGE_SPAWN.lng };
+
+        const loungeP = {
+          ...p,
+          location: loc,
+          activity: "lounge" as const,
+          extStatus: "green" as PaxExtStatus,
+        };
+        const cLounge = computePassenger(loungeP as any, flight, gate);
+        return {
+          ...cLounge,
+          location: loc,
+          path: [loc],
+          activity: "lounge",
+          extStatus: "red" as PaxExtStatus,
+          reason: "☕ In lounge · at risk — proceed to gate",
+          liveVideoGateHint: undefined,
+          rtOnline: true,
+        } as PassengerComputed;
+      }
+
       // When user is on PDR_AIRCHINA (or any client sending pax_trajectory), show current trajectory on map
-      if (trajectory && trajectory.position) {
+      if (p.id !== "P11" && trajectory && trajectory.position) {
         (computed as any).location = trajectory.position as LatLng;
         (computed as any).activity = "moving";
         (computed as any).path = (trajectory.path?.length ? trajectory.path : [trajectory.position]) as LatLng[];
