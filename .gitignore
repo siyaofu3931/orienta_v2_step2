@@ -4,3 +4,5 @@ dist/
 .env.local
 *.log
 .DS_Store
+
+# PEK video is tracked with Git LFS (see .gitattributes). Install: git lfs install

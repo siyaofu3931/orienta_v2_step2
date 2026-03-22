@@ -18,7 +18,13 @@ app.use(express.json());
 // API routes (flight, airport, gate) — must be before static
 registerApiRoutes(app);
 
-app.use(express.static(distDir));
+app.use(
+  express.static(distDir, {
+    setHeaders(res, filePath) {
+      if (/\.mp4$/i.test(filePath)) res.setHeader("Content-Type", "video/mp4");
+    },
+  })
+);
 // SPA fallback: serve index.html only for non-API routes (never for /api/*)
 app.get("*", (req, res) => {
   if (req.path.startsWith("/api")) return res.status(404).json({ error: "not_found", path: req.path });
