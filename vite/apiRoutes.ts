@@ -309,4 +309,9 @@ export function registerApiRoutes(app: import("express").Application) {
       res.status(502).json({ ok: false, error: "provider_error", message: e?.message || String(e) });
     }
   });
+
+  // Legacy Python backend paths — dev FIDS tries /flight/* then falls back to client mock when empty.
+  app.get("/flight/:mode", (req, res) => {
+    res.json({ ok: true, data: [] });
+  });
 }

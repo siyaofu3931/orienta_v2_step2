@@ -421,8 +421,11 @@
     if (intent === 'transfer'){
       if (!transfer) return;
       const hub = transfer.hub_airport;
-      const g1 = transfer.from_gate;
-      const g2 = transfer.to_gate;
+      // Demo: API often omits gates — fixed PEK T3E gates for 中转 PoC
+      const demoArrGate = 'E16';
+      const demoDepGate = 'E19';
+      const g1 = demoArrGate;
+      const g2 = demoDepGate;
 
       const dist = transfer.walk_distance_m ? `${Math.round(transfer.walk_distance_m)} m` : '—';
       const tmin = transfer.walk_time_min ? `${Math.round(transfer.walk_time_min)} min` : '—';
@@ -435,7 +438,7 @@
         mkKV([
           ['抵达机场', transfer.arrival.arr_iata || '—'],
           ['抵达航站楼', transfer.arrival.arr_terminal || '—'],
-          ['抵达登机口', transfer.arrival.arr_gate || '—', 'gate'],
+          ['抵达登机口', demoArrGate, 'gate'],
           ['中转到', `${g1} → ${g2}（${dist} / ${tmin}）`, ''],
         ]);
       } else {
@@ -446,7 +449,7 @@
         mkKV([
           ['出发机场', transfer.departure.dep_iata || '—'],
           ['出发航站楼', transfer.departure.dep_terminal || '—'],
-          ['出发登机口', transfer.departure.dep_gate || '—', 'gate'],
+          ['出发登机口', demoDepGate, 'gate'],
           ['中转从', `${g1} → ${g2}（${dist} / ${tmin}）`, ''],
         ]);
       }
