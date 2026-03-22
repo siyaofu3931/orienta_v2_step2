@@ -4,3 +4,7 @@ dist/
 .env.local
 *.log
 .DS_Store
+
+# PEK indoor video (~1.7GB) — over GitHub 100MB limit; keep locally or host elsewhere
+vite/public/route_site/pek_videoroute_E.MP4
+vite/public/route_site/pek_videoroute_E.mp4

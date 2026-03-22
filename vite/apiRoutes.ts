@@ -3,9 +3,21 @@
  * Provides /api/flight/closest, /api/transfer, /api/airport, /api/gate,
  * /api/mapkit/token, /api/config when Python backend is not available.
  */
-import type { Request, Response } from "express";
+import express, { type Request, type Response } from "express";
 import * as jose from "jose";
 import { readFileSync, existsSync } from "node:fs";
+import { resolveCanonicalPassengerId } from "./src/services/passengerAliases";
+import { pushRouteSiteTouristPosition, clearRouteSiteTouristPosition } from "./wsHub";
+
+function corsTouristApi(res: Response) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+}
+
+function defaultRouteSiteTenant(): string {
+  return process.env.ROUTE_SITE_DEFAULT_TENANT || "airchina";
+}
 
 // Static airport centers (PEK T3E, SFO)
 const AIRPORT_CENTERS: Record<string, [number, number]> = {
@@ -165,6 +177,76 @@ async function makeMapKitToken(origin: string): Promise<string> {
 }
 
 export function registerApiRoutes(app: import("express").Application) {
+  // route_site → back office (5174): same payload shape as legacy Python service, plus tenant_id / passenger_id
+  app.options("/api/tourist-position", (_req, res) => {
+    corsTouristApi(res);
+    res.sendStatus(204);
+  });
+  app.options("/api/tourist-deactivate", (_req, res) => {
+    corsTouristApi(res);
+    res.sendStatus(204);
+  });
+
+  app.post("/api/tourist-position", (req, res) => {
+    corsTouristApi(res);
+    const body = req.body || {};
+    const tenantId = String(body.tenant_id || body.tenantId || defaultRouteSiteTenant()).trim() || defaultRouteSiteTenant();
+    const passengerRaw = String(body.passenger_id || body.passengerId || "").trim();
+    const lat = Number(body.lat);
+    const lng = Number(body.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return res.status(400).json({ ok: false, error: "missing_lat_lng" });
+    }
+    const pid = resolveCanonicalPassengerId(passengerRaw);
+    if (!pid) {
+      return res.status(400).json({ ok: false, error: "missing_passenger_id" });
+    }
+    const path = Array.isArray(body.path) ? body.path : [];
+    const ok = pushRouteSiteTouristPosition({ tenantId, passengerId: pid, lat, lng, path });
+    if (!ok) return res.status(503).json({ ok: false, error: "hub_not_ready" });
+    return res.json({ ok: true });
+  });
+
+  app.post(
+    "/api/tourist-deactivate",
+    (req, res, next) => {
+      corsTouristApi(res);
+      const ct = String(req.headers["content-type"] || "").toLowerCase();
+      // Avoid double-reading the body when express.json() already ran (e.g. global middleware).
+      if (ct.includes("application/json") && req.body === undefined) {
+        return express.json()(req, res, next);
+      }
+      if (!ct.includes("application/json")) {
+        return express.text({ type: () => true, limit: "4kb" })(req, res, next);
+      }
+      return next();
+    },
+    (req: Request, res: Response) => {
+      corsTouristApi(res);
+      let tenantId = defaultRouteSiteTenant();
+      let passengerRaw = "";
+
+      if (typeof req.body === "string") {
+        const s = req.body.trim();
+        if (s.includes("|")) {
+          const parts = s.split("|");
+          tenantId = String(parts[0] || "").trim() || tenantId;
+          passengerRaw = String(parts.slice(1).join("|") || "").trim();
+        } else {
+          passengerRaw = s;
+        }
+      } else if (req.body && typeof req.body === "object") {
+        tenantId = String((req.body as any).tenant_id || (req.body as any).tenantId || tenantId).trim() || tenantId;
+        passengerRaw = String((req.body as any).passenger_id || (req.body as any).passengerId || "").trim();
+      }
+
+      const pid = resolveCanonicalPassengerId(passengerRaw);
+      if (!pid) return res.status(400).json({ ok: false, error: "missing_passenger_id" });
+      clearRouteSiteTouristPosition(tenantId, pid);
+      return res.json({ ok: true });
+    }
+  );
+
   app.get("/api/config", (_req, res) => {
     const mapsId = process.env.APPLE_MAPS_ID || process.env.VITE_MAPKIT_MAPS_ID || "";
     res.json({
