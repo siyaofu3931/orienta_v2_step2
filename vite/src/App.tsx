@@ -278,6 +278,7 @@ function Dashboard({ session, onLogout }: { session: AdminSession; onLogout(): v
         (computed as any).location = trajectory.position as LatLng;
         (computed as any).activity = "moving";
         (computed as any).path = (trajectory.path?.length ? trajectory.path : [trajectory.position]) as LatLng[];
+        computed.liveVideoGateHint = "Indoor video route (live)";
       }
       return computed;
     });
