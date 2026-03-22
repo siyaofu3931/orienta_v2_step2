@@ -40,6 +40,33 @@ function safeJsonParse(s: string): any {
   try { return JSON.parse(s); } catch { return null; }
 }
 
+function normalizeTrajectoryPath(raw: any[]): { lat: number; lng: number }[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((p: any) => ({ lat: Number(p.lat), lng: Number(p.lng) }))
+    .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
+}
+
+export type RouteSiteTouristPushArgs = {
+  tenantId: string;
+  passengerId: string;
+  lat: number;
+  lng: number;
+  path?: { lat: number; lng: number }[];
+};
+
+let routeSitePushImpl: ((a: RouteSiteTouristPushArgs) => boolean) | null = null;
+let routeSiteClearImpl: ((tenantId: string, passengerId: string) => boolean) | null = null;
+
+/** HTTP bridge from route_site (no WS): updates the same store as pax_trajectory. */
+export function pushRouteSiteTouristPosition(args: RouteSiteTouristPushArgs): boolean {
+  return routeSitePushImpl ? routeSitePushImpl(args) : false;
+}
+
+export function clearRouteSiteTouristPosition(tenantId: string, passengerId: string): boolean {
+  return routeSiteClearImpl ? routeSiteClearImpl(tenantId, passengerId) : false;
+}
+
 function wsSend(ws: WebSocket, obj: any) {
   if (ws.readyState !== ws.OPEN) return;
   ws.send(JSON.stringify(obj));
@@ -403,15 +430,7 @@ export function attachWsHub(server: ViteDevServer | HttpServer) {
         const path = Array.isArray(msg.path) ? msg.path : [];
         const pos = msg.position && typeof msg.position.lat === "number" && typeof msg.position.lng === "number"
           ? { lat: msg.position.lat, lng: msg.position.lng } : null;
-        const key = `${tenantId}::${passengerId}`;
-        const prev = paxTrajectories.get(key);
-        const position = pos || prev?.position;
-        const pathPoints = path.length > 0 ? path.map((p: any) => ({ lat: Number(p.lat), lng: Number(p.lng) })) : (prev?.path || []);
-        if (position) {
-          const data = { path: pathPoints, position };
-          paxTrajectories.set(key, data);
-          broadcastAdmins(tenantId, { type: "pax_trajectory", tenantId, passengerId, path: data.path, position: data.position });
-        }
+        storeAndBroadcastTrajectory(tenantId, passengerId, path, pos);
         return;
       }
 

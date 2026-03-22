@@ -233,6 +233,14 @@ function Dashboard({ session, onLogout }: { session: AdminSession; onLogout(): v
       onPaxTrajectory: (passengerId: string, data: PaxTrajectoryData) => {
         setPaxTrajectories(t => ({ ...t, [passengerId]: data }));
       },
+      onPaxTrajectoryClear: (passengerId: string) => {
+        setPaxTrajectories(t => {
+          if (!(passengerId in t)) return t;
+          const next = { ...t };
+          delete next[passengerId];
+          return next;
+        });
+      },
     });
     rtRef.current = rt;
     return () => { rtRef.current = null; rt.close(); };

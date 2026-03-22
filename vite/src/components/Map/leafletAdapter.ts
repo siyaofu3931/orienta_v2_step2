@@ -85,6 +85,7 @@ export default class LeafletAdapter {
   private lastData: Parameters<LeafletAdapter["setData"]>[0] | null = null;
   /** Avoid re-flying every sim tick — only when operator selects a different passenger. */
   private lastCameraFollowPassengerId: string | null = null;
+  private lastFollowLatLng: { lat: number; lng: number } | null = null;
 
   static async create(container: HTMLElement, opts: CreateOptions): Promise<LeafletAdapter> {
     const inst = new LeafletAdapter();
@@ -247,19 +248,36 @@ export default class LeafletAdapter {
     }
 
     const selId = data.selectedPassengerId;
-    if (selId && selId !== this.lastCameraFollowPassengerId) {
+    if (selId) {
       const pax = passengers.find((p) => p.id === selId);
       if (pax) {
-        const z = Math.min(18, Math.max(this.map.getZoom(), 17));
-        try {
-          this.map.flyTo([pax.location.lat, pax.location.lng], z, { duration: 0.55, easeLinearity: 0.22 });
-        } catch {
-          this.map.setView([pax.location.lat, pax.location.lng], z);
+        const cur = { lat: pax.location.lat, lng: pax.location.lng };
+        const isNewSelection = selId !== this.lastCameraFollowPassengerId;
+        if (isNewSelection) {
+          const z = Math.min(18, Math.max(this.map.getZoom(), 17));
+          try {
+            this.map.flyTo([cur.lat, cur.lng], z, { duration: 0.55, easeLinearity: 0.22 });
+          } catch {
+            this.map.setView([cur.lat, cur.lng], z);
+          }
+          this.lastFollowLatLng = { ...cur };
+        } else if (
+          this.lastFollowLatLng &&
+          (Math.abs(this.lastFollowLatLng.lat - cur.lat) > 2e-5 ||
+            Math.abs(this.lastFollowLatLng.lng - cur.lng) > 2e-5)
+        ) {
+          try {
+            this.map.panTo([cur.lat, cur.lng], { animate: true, duration: 0.25 });
+          } catch {
+            this.map.setView([cur.lat, cur.lng], this.map.getZoom());
+          }
+          this.lastFollowLatLng = { ...cur };
         }
+        this.lastCameraFollowPassengerId = selId;
       }
-      this.lastCameraFollowPassengerId = selId;
-    } else if (!selId) {
+    } else {
       this.lastCameraFollowPassengerId = null;
+      this.lastFollowLatLng = null;
     }
   }
 }

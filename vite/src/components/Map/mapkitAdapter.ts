@@ -50,6 +50,7 @@ export default class MapKitAdapter {
   private repositionTimer: any = null;
   private overlays: any[] = [];
   private lastCameraFollowPassengerId: string | null = null;
+  private lastFollowLatLng: { lat: number; lng: number } | null = null;
 
   static async preload() {
     // Apple CDN - you can lock a version if desired
@@ -314,23 +315,33 @@ export default class MapKitAdapter {
       this.overlays.push(pl);
     }
 
-    if (selectedPassengerId && selectedPassengerId !== this.lastCameraFollowPassengerId) {
+    if (selectedPassengerId) {
       const pax = passengers.find((p) => p.id === selectedPassengerId);
       if (pax) {
         const center = toCoord(this.mapkit, pax.location);
         const span = new this.mapkit.CoordinateSpan(0.004, 0.006);
         const region = new this.mapkit.CoordinateRegion(center, span);
-        try {
-          if (typeof (this.map as any).setRegionAnimated === "function") {
-            (this.map as any).setRegionAnimated(region, true);
-          } else {
-            this.map.region = region;
-          }
-        } catch {}
+        const isNewSelection = selectedPassengerId !== this.lastCameraFollowPassengerId;
+        const prev = this.lastFollowLatLng;
+        const moved =
+          prev &&
+          (Math.abs(prev.lat - pax.location.lat) > 2e-5 ||
+            Math.abs(prev.lng - pax.location.lng) > 2e-5);
+        if (isNewSelection || moved) {
+          try {
+            if (typeof (this.map as any).setRegionAnimated === "function") {
+              (this.map as any).setRegionAnimated(region, true);
+            } else {
+              this.map.region = region;
+            }
+          } catch {}
+          this.lastFollowLatLng = { lat: pax.location.lat, lng: pax.location.lng };
+        }
+        this.lastCameraFollowPassengerId = selectedPassengerId;
       }
-      this.lastCameraFollowPassengerId = selectedPassengerId;
-    } else if (!selectedPassengerId) {
+    } else {
       this.lastCameraFollowPassengerId = null;
+      this.lastFollowLatLng = null;
     }
   }
 }

@@ -62,6 +62,7 @@ export function connectAdminRealtime(opts: {
   onChatHistory?(passengerId: string, messages: ChatMessage[]): void;
   onChatRead?(passengerId: string, messageId: string, at: number): void;
   onPaxTrajectory?(passengerId: string, data: PaxTrajectoryData): void;
+  onPaxTrajectoryClear?(passengerId: string): void;
   onConnectionChange?(up: boolean): void;
 }): AdminRealtime {
   const { tenantId } = opts;
@@ -108,6 +109,9 @@ export function connectAdminRealtime(opts: {
           path: path.length ? path : [{ lat, lng }],
           position: { lat, lng },
         });
+      }
+      if (m.type === "pax_trajectory_clear" && m.passengerId) {
+        opts.onPaxTrajectoryClear?.(m.passengerId);
       }
     };
   };
