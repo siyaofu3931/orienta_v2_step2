@@ -27,8 +27,8 @@ export default function TopBar(props: {
   const {
     search,
     onSearch,
-    title = "Orienta · 航司后台",
-    subtitle = "国航 Demo · Gate / Passenger Ops",
+    title = "中国国际航空公司后台",
+    subtitle = "国航 · Gate / Passenger Ops",
     searchPlaceholder = "搜索登机口（如 E21 / D06）…",
     mapMode,
     setMapMode,
@@ -56,7 +56,7 @@ export default function TopBar(props: {
   return (
     <div className="topbar">
       <div className="brand">
-        <div className="logo" />
+        <img className="logo" src="/airchina-logo.png" alt="中国国际航空" />
         <div>
           <div className="title">{title}</div>
           <div className="subtitle">{subtitle}</div>
