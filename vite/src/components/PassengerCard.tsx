@@ -67,7 +67,9 @@ export default function PassengerCard(props: {
       <div className="row">
         <div className="kv">
           <div className="k">Gate</div>
-          <div className="v" style={{ fontWeight: 700, fontSize: 18, color: "#34c759" }}>{gate?.name || p.gateId}</div>
+          <div className="v" style={{ fontWeight: 700, fontSize: 18, color: "#34c759" }}>
+            {p.liveVideoGateHint || gate?.name || p.gateId}
+          </div>
         </div>
         <div className="kv">
           <div className="k">ETA</div>
