@@ -1,6 +1,7 @@
 /**
- * Dev-only middleware: handle /api/flight/closest when backend (port 8000) is not running.
- * Calls FlightAware AeroAPI v4 so the pax flight page works without a separate backend.
+ * Legacy dev middleware (superseded): Vite now mounts `registerApiRoutes` from apiRoutes.ts
+ * in vite.config.ts so POST /api/transfer and all /api/* work without Python on :8000.
+ * This file is kept for reference / optional reuse.
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { readFileSync } from "node:fs";
