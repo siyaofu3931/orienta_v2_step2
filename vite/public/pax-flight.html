@@ -13,20 +13,29 @@
   <script src="https://cdn.apple-mapkit.com/mk/5.x.x/mapkit.js" crossorigin="anonymous" defer></script>
 
   <style>
+    /* Portal-style page + 国航红 (airchina.com) */
     :root {
-      --bg: #0b0b0c;
-      --card: #151517;
-      --card2: #1c1c1e;
-      --text: rgba(255,255,255,0.92);
-      --muted: rgba(255,255,255,0.65);
-      --line: rgba(255,255,255,0.10);
-      --blue: #0a84ff;
-      --green: #34c759;
-      --yellow: #ffcc00;
-      --red: #ff3b30;
+      --ac-red: #c8102e;
+      --bg: linear-gradient(180deg, #f7f8fb 0%, #eceff4 50%, #e2e6ed 100%);
+      --card: #ffffff;
+      --card2: #f3f5f8;
+      --text: #1a1a1a;
+      --muted: #6b7280;
+      --line: #dce0e6;
+      --blue: #c8102e;
+      --green: #2e9d4f;
+      --yellow: #b8860b;
+      --red: #c8102e;
     }
     *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;}
+    body{
+      margin:0;
+      min-height:100vh;
+      background:var(--bg);
+      color:var(--text);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",Arial,sans-serif;
+      border-top:4px solid var(--ac-red);
+    }
     .wrap{max-width:980px;margin:0 auto;padding:14px;}
     .brand-bar{display:flex;justify-content:center;align-items:center;padding:10px 0 6px;margin:0 0 4px;}
     .brand-logo{height:48px;width:auto;max-width:min(220px,78vw);object-fit:contain;display:block;}
@@ -36,37 +45,37 @@
     }
     .title{font-size:18px;font-weight:800;}
     .sub{font-size:12px;color:var(--muted);margin-top:2px;}
-    .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.08);font-size:12px;color:var(--muted)}
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:#eef1f5;border:1px solid var(--line);font-size:12px;color:var(--muted)}
 
-    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;box-shadow:0 8px 30px rgba(26,26,26,0.06);}
     .grid{display:grid;grid-template-columns:1fr;gap:12px;}
     @media(min-width:980px){.grid{grid-template-columns:1fr 1fr;}}
 
-    .seg{display:inline-flex;gap:6px;background:rgba(255,255,255,0.06);padding:6px;border-radius:999px;border:1px solid var(--line)}
+    .seg{display:inline-flex;gap:6px;background:var(--card2);padding:6px;border-radius:999px;border:1px solid var(--line)}
     .seg button{border:0;background:transparent;color:var(--muted);padding:8px 12px;border-radius:999px;cursor:pointer;font-weight:700;font-size:12px}
-    .seg button.active{background:rgba(10,132,255,0.20);color:#fff}
+    .seg button.active{background:var(--ac-red);color:#fff}
 
     .kv{display:grid;grid-template-columns:120px 1fr;gap:8px 10px;font-size:13px;margin-top:10px}
     .k{color:var(--muted)}
     .v{font-weight:700}
-    .gate{color:var(--blue)}
+    .gate{color:var(--ac-red)}
 
     .badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;padding:4px 10px;border-radius:999px;border:1px solid var(--line)}
-    .b-ok{background:rgba(52,199,89,0.15);color:#bfffd1}
-    .b-warn{background:rgba(255,204,0,0.16);color:#fff1a8}
-    .b-bad{background:rgba(255,59,48,0.16);color:#ffd0cd}
-    .b-neu{background:rgba(142,142,147,0.18);color:#e7e7ea}
+    .b-ok{background:#e8f7ec;color:#1b5e28}
+    .b-warn{background:#fff8e6;color:#7a5a00}
+    .b-bad{background:#fdecea;color:#8a1c15}
+    .b-neu{background:#f3f4f6;color:#4b5563}
 
     .mapBox{background:var(--card2);border:1px solid var(--line);border-radius:16px;overflow:hidden}
-    .mapTop{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line);gap:10px}
+    .mapTop{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line);gap:10px;background:var(--card)}
     .mapTitle{font-size:13px;font-weight:900}
     .map{height:360px;}
     #osmMap{height:360px;}
 
     .btnRow{display:flex;gap:10px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap}
-    .btn{border:1px solid var(--line);background:rgba(255,255,255,0.06);color:#fff;border-radius:12px;padding:10px 14px;font-weight:800;cursor:pointer}
-    .btn.primary{background:var(--blue);border-color:rgba(10,132,255,0.35)}
-    .err{margin-top:10px;color:#ffb4ae;font-size:12px;white-space:pre-wrap}
+    .btn{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:12px;padding:10px 14px;font-weight:800;cursor:pointer}
+    .btn.primary{background:var(--ac-red);border-color:var(--ac-red);color:#fff}
+    .err{margin-top:10px;color:#a30d25;font-size:12px;white-space:pre-wrap}
 
     .muted{color:var(--muted)}
     .small{font-size:12px}
@@ -343,7 +352,7 @@
       const ann = new window.mapkit.MarkerAnnotation(new window.mapkit.Coordinate(ll[0], ll[1]), {
         title: `${airport} ${p.gate}`,
         glyphText: p.glyph || '✈️',
-        color: p.color || '#0a84ff',
+        color: p.color || '#c8102e',
       });
       items.push(ann);
     }
@@ -421,8 +430,11 @@
     if (intent === 'transfer'){
       if (!transfer) return;
       const hub = transfer.hub_airport;
-      const g1 = transfer.from_gate;
-      const g2 = transfer.to_gate;
+      // Demo: API often omits gates — fixed PEK T3E gates for 中转 PoC
+      const demoArrGate = 'E16';
+      const demoDepGate = 'E19';
+      const g1 = demoArrGate;
+      const g2 = demoDepGate;
 
       const dist = transfer.walk_distance_m ? `${Math.round(transfer.walk_distance_m)} m` : '—';
       const tmin = transfer.walk_time_min ? `${Math.round(transfer.walk_time_min)} min` : '—';
@@ -435,7 +447,7 @@
         mkKV([
           ['抵达机场', transfer.arrival.arr_iata || '—'],
           ['抵达航站楼', transfer.arrival.arr_terminal || '—'],
-          ['抵达登机口', transfer.arrival.arr_gate || '—', 'gate'],
+          ['抵达登机口', demoArrGate, 'gate'],
           ['中转到', `${g1} → ${g2}（${dist} / ${tmin}）`, ''],
         ]);
       } else {
@@ -446,7 +458,7 @@
         mkKV([
           ['出发机场', transfer.departure.dep_iata || '—'],
           ['出发航站楼', transfer.departure.dep_terminal || '—'],
-          ['出发登机口', transfer.departure.dep_gate || '—', 'gate'],
+          ['出发登机口', demoDepGate, 'gate'],
           ['中转从', `${g1} → ${g2}（${dist} / ${tmin}）`, ''],
         ]);
       }
@@ -456,7 +468,7 @@
 
       const points = [
         { gate: g1, glyph: '1', color: '#34c759' },
-        { gate: g2, glyph: '2', color: '#0a84ff' },
+        { gate: g2, glyph: '2', color: '#c8102e' },
       ];
 
       if (mapMode === 'apple') drawApple(hub, points).catch(()=>setMapMode('osm'));
@@ -494,7 +506,7 @@
     mapTitle.textContent = `${leg === 'dep' ? '出发' : '抵达'}地图 · ${airport}`;
     mapDesc.textContent = `Terminal ${terminal} · Gate ${gate}`;
 
-    const points = [{ gate: gate, glyph: '✈️', color: '#0a84ff' }];
+    const points = [{ gate: gate, glyph: '✈️', color: '#c8102e' }];
     if (mapMode === 'apple') drawApple(airport, points).catch(()=>setMapMode('osm'));
     else drawOSM(airport, points);
   }
@@ -573,14 +585,25 @@
     location.href = back.pathname + '?' + back.searchParams.toString();
   });
 
-  document.getElementById('navBtn').addEventListener('click', ()=>{
-    // Step 4/5:暂时跳转到聊天页（pax.html）。
+  function gatesForRouteVideo(){
+    if (intent === 'transfer'){
+      return { fromGate: 'E16', toGate: 'E19' };
+    }
+    if (single && single.instance){
+      const inst = single.instance;
+      const a = norm(inst.arr_gate);
+      const d = norm(inst.dep_gate);
+      return { fromGate: a || '', toGate: d || '' };
+    }
+    return { fromGate: '', toGate: '' };
+  }
+
+  function buildPaxHtmlHref(){
     const u = new URL('/pax.html', location.origin);
     u.searchParams.set('tenant', tenant);
     u.searchParams.set('pax', pid);
     u.searchParams.set('plan', plan);
     u.searchParams.set('name', name);
-
     if (intent === 'transfer'){
       u.searchParams.set('arr', arrFlight);
       u.searchParams.set('dep', depFlight);
@@ -589,8 +612,21 @@
       u.searchParams.set('spawnLat', String(spawn.lat));
       u.searchParams.set('spawnLng', String(spawn.lng));
     }
+    const g = gatesForRouteVideo();
+    if (g.fromGate) u.searchParams.set('gateFrom', g.fromGate);
+    if (g.toGate) u.searchParams.set('gateTo', g.toGate);
+    if (intent === 'transfer' && transfer && transfer.hub_airport) {
+      u.searchParams.set('hub', String(transfer.hub_airport).toUpperCase());
+    } else if (single && single.instance) {
+      const inst = single.instance;
+      const hx = inst.arr_iata || inst.dep_iata;
+      if (hx) u.searchParams.set('hub', String(hx).toUpperCase());
+    }
+    return u.pathname + '?' + u.searchParams.toString();
+  }
 
-    location.href = u.pathname + '?' + u.searchParams.toString();
+  document.getElementById('navBtn').addEventListener('click', ()=>{
+    location.href = buildPaxHtmlHref();
   });
 
   // init

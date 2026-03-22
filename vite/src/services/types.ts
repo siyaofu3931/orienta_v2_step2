@@ -23,7 +23,8 @@ export type PassengerActivity =
   | "dining"
   | "idle"
   | "at_gate"
-  | "boarded";
+  | "boarded"
+  | "lounge";
 
 export type TransferDirection = "intl_to_intl" | "intl_to_dom" | "dom_to_intl" | "dom_to_dom";
 
