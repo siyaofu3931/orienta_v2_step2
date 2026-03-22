@@ -1,0 +1,3 @@
+# PEK indoor route video (~1.7 GB) — Git LFS (GitHub blocks raw blobs > 100 MB)
+vite/public/route_site/pek_videoroute_E.MP4 filter=lfs diff=lfs merge=lfs -text
+vite/public/route_site/pek_videoroute_E.mp4 filter=lfs diff=lfs merge=lfs -text
