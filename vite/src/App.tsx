@@ -456,7 +456,7 @@ function Dashboard({ session, onLogout }: { session: AdminSession; onLogout(): v
     <div className="app">
       <TopBar
         search={search} onSearch={setSearch}
-        title="Orienta · 航司后台"
+        title="中国国际航空公司后台"
         subtitle={airportLabel}
         searchPlaceholder={airport === "PEK" ? "搜索登机口（如 E21 / D06）…" : "搜索登机口（如 B3 / G13）…"}
         mapMode={mapMode}

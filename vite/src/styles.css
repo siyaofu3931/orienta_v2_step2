@@ -218,18 +218,23 @@ a:hover{ text-decoration:underline; }
   display:flex;
   align-items:center;
   gap:10px;
-  min-width: 220px;
+  min-width: 240px;
+  max-width: min(420px, 42vw);
 }
 .brand .logo{
-  width: 28px;
-  height: 28px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #0ea5e9, #22c55e);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+  height: 34px;
+  width: auto;
+  max-width: 132px;
+  object-fit: contain;
+  display: block;
+  flex-shrink: 0;
+  border-radius: 4px;
 }
 .brand .title{
   font-weight: 700;
   letter-spacing: .2px;
+  font-size: 15px;
+  line-height: 1.25;
 }
 .brand .subtitle{
   font-size: 12px;
