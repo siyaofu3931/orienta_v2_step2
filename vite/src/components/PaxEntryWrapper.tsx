@@ -55,6 +55,37 @@ function buildPaxFlightSrc(
   return f.pathname + "?" + f.searchParams.toString();
 }
 
+function demoGatePairForPid(pid: string): { gateFrom: string; gateTo: string } {
+  // gateFrom = arrival gate, gateTo = departure gate
+  if (pid === "TX1") return { gateFrom: "E16", gateTo: "E19" };
+  if (pid === "TX2") return { gateFrom: "E15", gateTo: "E19" };
+  if (pid === "TX3") return { gateFrom: "E15", gateTo: "E19" };
+  return { gateFrom: "E16", gateTo: "E19" };
+}
+
+function buildPaxDialogVideoSrc(
+  origin: string,
+  tenantId: string,
+  pid: string,
+  spawn: ReturnType<typeof parseSpawnFromQuery>
+) {
+  const u = new URL("/pax.html", origin);
+  u.searchParams.set("tenant", tenantId);
+  u.searchParams.set("pax", pid);
+  u.searchParams.set("plan", "premium");
+  if (tenantId === "airchina") u.searchParams.set("hub", "PEK");
+
+  // Start on video tab immediately.
+  u.searchParams.set("view", "video");
+
+  const { gateFrom, gateTo } = demoGatePairForPid(pid);
+  u.searchParams.set("gateFrom", gateFrom);
+  u.searchParams.set("gateTo", gateTo);
+
+  appendSpawnParams(u, spawn);
+  return u.pathname + "?" + u.searchParams.toString();
+}
+
 /**
  * Route: /pax?pid=TX1&tenant=airchina (PEK) or tenant=airchina_sfo (SFO)
  * Lounge QR: /pax?pid=TX1&tenant=airchina&lounge=1 → fixed spawn on admin map (see passengerSpawn.ts)
@@ -92,8 +123,11 @@ export default function PaxEntryWrapper() {
     () => qs("direct") === "1" || qs("skip") === "1" || qs("demo") === "1",
     []
   );
-  /** QR-prefilled path: if flight params exist, skip login and jump to pax-flight results page. */
-  const skipToPaxFlight = useMemo(
+  /**
+   * QR-prefilled demo path: QR already includes routing data.
+   * We skip login and go directly to pax.html (dialog + video).
+   */
+  const skipToPaxDialogAndVideo = useMemo(
     () => !!prefillFlight || (!!prefillArr && !!prefillDep),
     [prefillFlight, prefillArr, prefillDep]
   );
@@ -102,25 +136,8 @@ export default function PaxEntryWrapper() {
     if (skipToPaxHtml) {
       return buildPaxHtmlSrc(location.origin, tenantId, pid, spawn);
     }
-    if (skipToPaxFlight) {
-      const inferredIntent: "depart" | "arrive" | "transfer" =
-        prefillArr && prefillDep
-          ? "transfer"
-          : incomingIntent === "arrive"
-          ? "arrive"
-          : "depart";
-      const plan = incomingPlan;
-      const name = incomingName || (plan === "premium" ? "SIYAO FU" : "Guest");
-      return buildPaxFlightSrc(
-        location.origin,
-        tenantId,
-        pid,
-        plan,
-        name,
-        inferredIntent,
-        { flight: prefillFlight, arr: prefillArr, dep: prefillDep },
-        spawn
-      );
+    if (skipToPaxDialogAndVideo) {
+      return buildPaxDialogVideoSrc(location.origin, tenantId, pid, spawn);
     }
     const u = new URL("/pax-login.html", location.origin);
     u.searchParams.set("pid", pid);
