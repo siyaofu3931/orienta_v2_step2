@@ -154,7 +154,7 @@
 function resolveCanonicalPassengerId(raw) {
   const s = (raw || "").trim();
   if (!s) return "";
-  var m = { DA8X3: "TX1", DB5K7: "TX2", DC2N9: "TX3" };
+  var m = { DA8X3: "TX1", DB5K7: "TX3", DC2N9: "TX2" };
   return m[s.toUpperCase()] || s;
 }
 const params = new URLSearchParams(location.search);
@@ -247,8 +247,9 @@ function onVideoTabShown() {
 
 // Passenger profiles (mirror of passengerSim scenarios)
 const PAX_DATA = {
-  TX1:  { name: "SIYAO FU",        plan: "premium", inbound: "CA836←LHR", outbound: "CA783→FRA", gate: "E15", status: "At Risk" },
-  TX2:  { name: "Li Na",           plan: "premium", inbound: "CA856←FRA", outbound: "CA901→NRT", gate: "E08", status: "Moving" },
+  TX1:  { name: "SIYAO FU",        plan: "premium", inbound: "CA836←CDG", outbound: "CA783→CDG", gate: "E19", status: "At Risk" },
+  TX2:  { name: "SOPHIE CHEN",     plan: "premium", inbound: "CA783←FRA", outbound: "CA903→CDG", gate: "E19", status: "Moving" },
+  TX3:  { name: "YAN JIANG",       plan: "premium", inbound: "CA921←SYD", outbound: "CA837→CDG", gate: "E19", status: "At Risk" },
   P3:   { name: "Maria Rodriguez", plan: "premium", inbound: "CA901←NRT", outbound: "CA931→LAX", gate: "E11", status: "Moving (♿)" },
   P4:   { name: "Arjun Sharma",    plan: "free",    inbound: "CA836←LHR", outbound: "CA931→LAX", gate: "E11", status: "On Track" },
   P5:   { name: "Sophie Dupont",   plan: "free",    inbound: "CA856←FRA", outbound: "CA921→SYD", gate: "E14", status: "Shopping" },

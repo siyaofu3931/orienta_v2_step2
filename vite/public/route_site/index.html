@@ -847,7 +847,7 @@ try {
   var __osp = new URLSearchParams(location.search);
   ROUTE_SITE_TENANT_ID = (__osp.get("tenant") || "airchina").trim() || "airchina";
   var __rawPax = (__osp.get("pax") || __osp.get("pid") || "TX1").trim() || "TX1";
-  var __paxAlias = { DA8X3: "TX1", DB5K7: "TX2", DC2N9: "TX3" };
+  var __paxAlias = { DA8X3: "TX1", DB5K7: "TX3", DC2N9: "TX2" };
   ROUTE_SITE_PASSENGER_ID = __paxAlias[__rawPax.toUpperCase()] || __rawPax;
 } catch (e) {}
 var SENSOR_BACKEND_URL = "";

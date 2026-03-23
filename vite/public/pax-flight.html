@@ -143,7 +143,7 @@
   function resolveCanonicalPassengerId(raw) {
     const s = (raw || "").trim();
     if (!s) return "";
-    var m = { DA8X3: "TX1", DB5K7: "TX2", DC2N9: "TX3" };
+    var m = { DA8X3: "TX1", DB5K7: "TX3", DC2N9: "TX2" };
     return m[s.toUpperCase()] || s;
   }
   const qs = (k) => new URL(location.href).searchParams.get(k);
@@ -434,9 +434,15 @@
     if (intent === 'transfer'){
       if (!transfer) return;
       const hub = transfer.hub_airport;
-      // Demo: API often omits gates — fixed PEK T3E gates for 中转 PoC
-      const demoArrGate = 'E16';
-      const demoDepGate = 'E19';
+      // Demo: fixed transfer gates per boarding-pass passenger mapping.
+      const demoGateByPid = {
+        TX1: { arr: 'E16', dep: 'E19' },
+        TX2: { arr: 'E15', dep: 'E19' },
+        TX3: { arr: 'E17', dep: 'E19' },
+      };
+      const demoPair = demoGateByPid[pid] || { arr: 'E16', dep: 'E19' };
+      const demoArrGate = demoPair.arr;
+      const demoDepGate = demoPair.dep;
       const g1 = demoArrGate;
       const g2 = demoDepGate;
 
