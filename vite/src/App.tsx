@@ -28,7 +28,9 @@ import { MOCK_LOUNGE_SPAWN } from "./services/passengerSpawn";
 export default function App() {
   if (typeof window !== "undefined") {
     normalizeLoungePathToPax();
-    if (window.location.pathname.startsWith("/pax")) {
+    // Only mount the pax entry wrapper on the `/pax` entry route.
+    // Do NOT match `/pax.html`, otherwise the real pax.html page (WS + trajectory) may never load.
+    if (window.location.pathname === "/pax" || window.location.pathname === "/pax/") {
       return <PaxEntryWrapper />;
     }
   }
