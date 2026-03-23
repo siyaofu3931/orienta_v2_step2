@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orienta · Demo Boarding Passes</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Noto+Sans+SC:wght@300;400;600;700&family=Share+Tech+Mono&display=swap');
+
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --red:#c8102e;
+  --navy:#1a2744;
+  --bg:#dde3ee;
+  --paper:#ffffff;
+  --line:#e4e9f2;
+}
+html,body{
+  background:var(--bg);
+  font-family:"Barlow Condensed","Noto Sans SC",sans-serif;
+}
+body{padding:36px 24px;}
+
+/* ── PAGE HEADER ── */
+.pg-header{
+  text-align:center;margin-bottom:36px;
+}
+.pg-header h1{
+  font-size:18px;font-weight:700;color:var(--navy);
+  letter-spacing:.08em;text-transform:uppercase;
+}
+.pg-header p{font-size:11px;color:#64748b;margin-top:3px;}
+.print-btn{
+  margin-top:12px;
+  display:inline-flex;align-items:center;gap:7px;
+  background:var(--red);color:white;border:none;
+  padding:9px 20px;border-radius:5px;font-size:12px;
+  font-weight:700;cursor:pointer;letter-spacing:.04em;
+  font-family:inherit;text-transform:uppercase;
+}
+.print-btn:hover{background:#a00d22;}
+
+/* ── OUTER WRAPPER ──
+   Real boarding pass: ~216mm × 80mm (landscape credit-card-width strip)
+   We render at 800px × ~300px on screen, scale with CSS for print
+*/
+.bp-outer{
+  margin:0 auto 24px;
+  /* Actual print size: 210mm × 82mm */
+  width:840px;
+  position:relative;
+}
+
+/* Punch holes */
+.bp-outer::before,
+.bp-outer::after{
+  content:'';
+  position:absolute;
+  width:18px;height:18px;border-radius:50%;
+  background:var(--bg);
+  border:1px solid #c0c8d8;
+  top:50%;transform:translateY(-50%);
+  z-index:5;
+}
+.bp-outer::before{left:calc(73% - 9px);}
+.bp-outer::after{right:calc(27% - 9px);display:none;}/* only left hole needed */
+
+.bp-card{
+  display:flex;
+  height:280px;         /* 840×280 = exactly 3:1 landscape */
+  background:var(--paper);
+  border-radius:10px;
+  overflow:hidden;
+  box-shadow:0 6px 28px rgba(26,39,68,.18),0 1px 4px rgba(26,39,68,.08);
+  border:1px solid #d0d8e8;
+  position:relative;
+}
+
+/* ── MAIN TICKET ── */
+.bp-main{
+  width:73%;
+  flex-shrink:0;
+  display:flex;
+  flex-direction:column;
+  border-right:none;
+}
+
+/* Top color bar */
+.bp-topbar{
+  display:flex;align-items:center;gap:12px;
+  padding:9px 16px;
+  flex-shrink:0;
+}
+.bp-topbar-left{display:flex;align-items:center;gap:9px;}
+.bp-phoenix-svg{width:26px;height:26px;flex-shrink:0;}
+.bp-airline-en{font-size:14px;font-weight:700;color:white;letter-spacing:.06em;line-height:1;}
+.bp-airline-cn{font-size:8px;color:rgba(255,255,255,.7);margin-top:2px;font-family:"Noto Sans SC",sans-serif;}
+.bp-class-pill{
+  margin-left:auto;
+  font-size:9px;font-weight:700;color:white;
+  background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);
+  padding:2px 10px;border-radius:10px;letter-spacing:.05em;white-space:nowrap;
+}
+.bp-seq-block{margin-left:12px;text-align:right;}
+.bp-seq-label{font-size:7px;color:rgba(255,255,255,.6);letter-spacing:.1em;}
+.bp-seq-num{font-size:16px;font-weight:700;color:white;font-family:"Share Tech Mono",monospace;line-height:1;}
+
+/* Passenger row */
+.bp-pax-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:6px 16px 5px;
+  border-bottom:1px solid var(--line);
+  flex-shrink:0;
+}
+.bp-micro-label{font-size:7px;color:#94a3b8;letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px;font-family:"Share Tech Mono",monospace;}
+.bp-pax-name{font-size:17px;font-weight:900;color:var(--navy);letter-spacing:.03em;line-height:1;}
+.bp-pax-cn{font-size:13px;font-weight:600;color:#4a5568;margin-left:8px;font-family:"Noto Sans SC",sans-serif;}
+.bp-date{font-size:12px;font-weight:700;color:var(--navy);font-family:"Share Tech Mono",monospace;}
+
+/* Route strip */
+.bp-route-strip{
+  display:flex;align-items:center;
+  padding:8px 16px;
+  border-bottom:1px solid var(--line);
+  gap:6px;
+  flex-shrink:0;
+}
+.bp-airport-block{text-align:center;}
+.bp-iata{font-size:26px;font-weight:900;color:var(--navy);line-height:1;letter-spacing:-.02em;}
+.bp-city-name{font-size:8px;color:#94a3b8;letter-spacing:.06em;text-transform:uppercase;margin-top:1px;}
+.bp-via{padding:0 8px;}
+.bp-via .bp-iata{font-size:20px;}
+.bp-via-badge{
+  display:inline-block;background:#eef1f8;color:var(--navy);
+  font-size:7px;font-weight:700;padding:2px 6px;border-radius:3px;
+  letter-spacing:.07em;margin-top:3px;
+}
+.bp-arr{
+  display:flex;align-items:center;flex:1;
+}
+.bp-arr-line{flex:1;height:1px;background:#c8d0e0;}
+.bp-arr-plane{font-size:12px;color:#94a3b8;padding:0 3px;}
+
+/* Key data row */
+.bp-data-row{
+  display:flex;
+  flex:1;
+  border-bottom:1px solid var(--line);
+}
+.bp-data-cell{
+  flex:1;
+  padding:6px 10px;
+  border-right:1px solid var(--line);
+  display:flex;flex-direction:column;justify-content:center;
+}
+.bp-data-cell:last-child{border-right:none;}
+.bp-data-val{font-size:16px;font-weight:700;color:var(--navy);line-height:1;margin-top:2px;}
+
+/* Barcode row */
+.bp-barcode-row{
+  display:flex;align-items:center;gap:10px;
+  padding:6px 16px;
+  flex-shrink:0;
+}
+.bp-barcode-wrap svg{display:block;}
+.bp-barcode-txt{font-size:8px;color:#94a3b8;font-family:"Share Tech Mono",monospace;letter-spacing:.06em;}
+
+/* ── PERFORATION ── */
+.bp-perf{
+  width:0;
+  position:relative;
+  border-left:2px dashed #c0c8d8;
+  margin:12px 0;
+  flex-shrink:0;
+}
+
+/* ── STUB ── */
+.bp-stub{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  background:#f8f9fc;
+}
+.bp-stub-header{
+  padding:8px 12px;
+  flex-shrink:0;
+}
+.bp-stub-info{
+  display:grid;grid-template-columns:1fr 1fr;
+  padding:6px 12px;gap:6px 4px;
+  border-bottom:1px solid var(--line);
+  flex-shrink:0;
+}
+.bp-stub-cell{display:flex;flex-direction:column;}
+.bp-stub-val{font-size:15px;font-weight:700;color:var(--navy);line-height:1;margin-top:2px;}
+
+/* ── ORIENTA STRIP ── */
+.bp-orienta-strip{
+  flex:1;
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;
+  padding:6px 10px 8px;
+  gap:3px;
+}
+.bp-orienta-header{
+  display:flex;align-items:center;gap:5px;
+}
+.bp-o-dot{
+  width:5px;height:5px;border-radius:50%;
+  background:var(--red);
+  animation:pulse 2s infinite;
+  flex-shrink:0;
+}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.4)}}
+.bp-o-title{font-size:10px;font-weight:700;color:var(--navy);letter-spacing:.04em;text-transform:uppercase;}
+.bp-o-sub{font-size:8px;color:#94a3b8;text-align:center;font-family:"Noto Sans SC",sans-serif;}
+.bp-qr-box{
+  width:76px;height:76px;
+  background:white;
+  border:1px solid var(--line);
+  border-radius:3px;
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;
+  padding:1px;
+}
+.bp-qr-box img,.bp-qr-box canvas{width:100%!important;height:100%!important;}
+.bp-o-hint{font-size:7.5px;color:#94a3b8;text-align:center;font-family:"Share Tech Mono",monospace;}
+.bp-o-url{font-size:7px;color:#c0c8d8;font-family:"Share Tech Mono",monospace;}
+
+/* ── PRINT ── */
+@media print{
+  html,body{background:white;padding:6mm 8mm;margin:0;}
+  .pg-header,.print-btn{display:none!important;}
+  .bp-outer{
+    width:210mm;
+    margin:0 auto 6mm;
+    page-break-inside:avoid;
+  }
+  .bp-outer::before,.bp-outer::after{display:none;}
+  .bp-card{
+    height:70mm;
+    box-shadow:none;
+    border:0.5px solid #c0c8d8;
+  }
+  @page{margin:8mm;size:A4 portrait;}
+}
+</style>
+</head>
+<body>
+
+<div class="pg-header">
+  <h1>Orienta · Demo Boarding Passes · 演示登机牌</h1>
+  <p>三张仿真登机牌供现场演示使用 · For demonstration purposes only · 请打印后按虚线裁剪</p>
+  <button class="print-btn" onclick="window.print()">🖨 Print / 打印</button>
+</div>
+
+
+<div class="bp-outer">
+  <div class="bp-card">
+
+    <!-- ╔══════════════════════════════════════════════════════╗ -->
+    <!-- ║  MAIN TICKET (left ~73%)                            ║ -->
+    <!-- ╚══════════════════════════════════════════════════════╝ -->
+    <div class="bp-main">
+
+      <!-- Top color bar -->
+      <div class="bp-topbar" style="background:#c8102e">
+        <div class="bp-topbar-left">
+          <svg class="bp-phoenix-svg" viewBox="0 0 28 28">
+            <circle cx="14" cy="14" r="12" fill="rgba(255,255,255,.15)"/>
+            <path d="M14 3 C9.5 5 6 9 7 13 C8 17.5 11.5 19.5 14 25 C16.5 19.5 20 17.5 21 13 C22 9 18.5 5 14 3Z" fill="white" opacity=".9"/>
+            <path d="M7 9 C4.5 11 4 14.5 6 17 L9.5 14Z" fill="white"/>
+            <path d="M21 9 C23.5 11 24 14.5 22 17 L18.5 14Z" fill="white"/>
+            <circle cx="14" cy="13" r="2.2" fill="white"/>
+          </svg>
+          <div>
+            <div class="bp-airline-en">AIR CHINA</div>
+            <div class="bp-airline-cn">中国国际航空</div>
+          </div>
+        </div>
+        <div class="bp-class-pill">BUSINESS / 商务舱</div>
+        <div class="bp-seq-block">
+          <div class="bp-seq-label">SEQ</div>
+          <div class="bp-seq-num">001</div>
+        </div>
+      </div>
+
+      <!-- Passenger row -->
+      <div class="bp-pax-row">
+        <div class="bp-pax-block">
+          <div class="bp-micro-label">PASSENGER NAME / 旅客姓名</div>
+          <div class="bp-pax-name">SIYAO FU  <span class="bp-pax-cn">FU SIYAO</span></div>
+        </div>
+        <div class="bp-pax-right">
+          <div class="bp-micro-label">DATE / 日期</div>
+          <div class="bp-date">26 MAR 2026</div>
+        </div>
+      </div>
+
+      <!-- Route strip -->
+      <div class="bp-route-strip">
+        <!-- FROM -->
+        <div class="bp-airport-block">
+          <div class="bp-iata">CDG</div>
+          <div class="bp-city-name">PARIS</div>
+        </div>
+        <!-- arrow -->
+        <div class="bp-arr">
+          <div class="bp-arr-line"></div>
+          <span class="bp-arr-plane">✈</span>
+        </div>
+        <!-- VIA PEK -->
+        <div class="bp-airport-block bp-via">
+          <div class="bp-iata" style="font-size:22px">PEK</div>
+          <div class="bp-city-name">BEIJING T3E</div>
+          <div class="bp-via-badge">VIA · TRANSFER</div>
+        </div>
+        <!-- arrow -->
+        <div class="bp-arr">
+          <span class="bp-arr-plane">✈</span>
+          <div class="bp-arr-line"></div>
+        </div>
+        <!-- TO -->
+        <div class="bp-airport-block">
+          <div class="bp-iata">CDG</div>
+          <div class="bp-city-name">PARIS</div>
+        </div>
+      </div>
+
+      <!-- Key data row -->
+      <div class="bp-data-row">
+        <div class="bp-data-cell">
+          <div class="bp-micro-label">INBOUND</div>
+          <div class="bp-data-val">CA836</div>
+        </div>
+        <div class="bp-data-cell bp-data-cell-hi" style="--hi:#c8102e">
+          <div class="bp-micro-label">ONWARD FLIGHT</div>
+          <div class="bp-data-val" style="color:#c8102e;font-size:20px">CA783</div>
+        </div>
+        <div class="bp-data-cell bp-data-cell-hi" style="--hi:#c8102e">
+          <div class="bp-micro-label">GATE / 登机口</div>
+          <div class="bp-data-val" style="color:#c8102e;font-size:26px;font-weight:900">E19</div>
+        </div>
+        <div class="bp-data-cell bp-data-cell-hi" style="--hi:#c8102e">
+          <div class="bp-micro-label">SEAT / 座位</div>
+          <div class="bp-data-val" style="color:#c8102e;font-size:28px;font-weight:900;letter-spacing:-1px">2C</div>
+        </div>
+        <div class="bp-data-cell">
+          <div class="bp-micro-label">BOARDING</div>
+          <div class="bp-data-val">14:10</div>
+        </div>
+        <div class="bp-data-cell">
+          <div class="bp-micro-label">DEPARTS</div>
+          <div class="bp-data-val">14:40</div>
+        </div>
+        <div class="bp-data-cell">
+          <div class="bp-micro-label">ZONE</div>
+          <div class="bp-data-val">1</div>
+        </div>
+      </div>
+
+      <!-- Barcode row -->
+      <div class="bp-barcode-row">
+        <div class="bp-barcode-wrap">
+          <svg xmlns="http://www.w3.org/2000/svg" width="160" height="36" viewBox="0 0 160 36"><rect width="160" height="36" fill="white"/><rect x="6" y="0" width="2" height="36" fill="black"/><rect x="8" y="0" width="3" height="36" fill="black"/><rect x="11" y="0" width="2" height="36" fill="black"/><rect x="13" y="0" width="2" height="36" fill="black"/><rect x="17" y="0" width="1" height="36" fill="black"/><rect x="21" y="0" width="2" height="36" fill="black"/><rect x="25" y="0" width="3" height="36" fill="black"/><rect x="28" y="0" width="1" height="36" fill="black"/><rect x="36" y="0" width="2" height="36" fill="black"/><rect x="38" y="0" width="2" height="36" fill="black"/><rect x="41" y="0" width="1" height="36" fill="black"/><rect x="45" y="0" width="2" height="36" fill="black"/><rect x="47" y="0" width="1" height="36" fill="black"/><rect x="52" y="0" width="2" height="36" fill="black"/><rect x="56" y="0" width="2" height="36" fill="black"/><rect x="60" y="0" width="1" height="36" fill="black"/><rect x="61" y="0" width="1" height="36" fill="black"/><rect x="62" y="0" width="1" height="36" fill="black"/><rect x="65" y="0" width="2" height="36" fill="black"/><rect x="68" y="0" width="3" height="36" fill="black"/><rect x="72" y="0" width="3" height="36" fill="black"/><rect x="81" y="0" width="1" height="36" fill="black"/><rect x="84" y="0" width="1" height="36" fill="black"/><rect x="85" y="0" width="1" height="36" fill="black"/><rect x="86" y="0" width="1" height="36" fill="black"/><rect x="87" y="0" width="1" height="36" fill="black"/><rect x="89" y="0" width="1" height="36" fill="black"/><rect x="90" y="0" width="1" height="36" fill="black"/><rect x="96" y="0" width="1" height="36" fill="black"/><rect x="97" y="0" width="1" height="36" fill="black"/><rect x="98" y="0" width="1" height="36" fill="black"/><rect x="99" y="0" width="2" height="36" fill="black"/><rect x="108" y="0" width="3" height="36" fill="black"/><rect x="111" y="0" width="1" height="36" fill="black"/><rect x="112" y="0" width="3" height="36" fill="black"/><rect x="116" y="0" width="2" height="36" fill="black"/><rect x="118" y="0" width="1" height="36" fill="black"/><rect x="119" y="0" width="2" height="36" fill="black"/><rect x="122" y="0" width="1" height="36" fill="black"/><rect x="123" y="0" width="1" height="36" fill="black"/><rect x="126" y="0" width="1" height="36" fill="black"/><rect x="128" y="0" width="3" height="36" fill="black"/><rect x="132" y="0" width="3" height="36" fill="black"/><rect x="135" y="0" width="2" height="36" fill="black"/><rect x="139" y="0" width="1" height="36" fill="black"/><rect x="141" y="0" width="1" height="36" fill="black"/><rect x="142" y="0" width="1" height="36" fill="black"/><rect x="149" y="0" width="2" height="36" fill="black"/><rect x="154" y="0" width="1" height="36" fill="black"/></svg>
+        </div>
+        <div class="bp-barcode-txt">DA8X3 · CA783 · CDG · 2C</div>
+      </div>
+
+    </div><!-- /bp-main -->
+
+    <!-- Perforation -->
+    <div class="bp-perf"></div>
+
+    <!-- ╔══════════════════════╗ -->
+    <!-- ║  STUB (right ~27%)  ║ -->
+    <!-- ╚══════════════════════╝ -->
+    <div class="bp-stub">
+
+      <!-- Stub header -->
+      <div class="bp-stub-header" style="background:#c8102e">
+        <div style="color:white;font-size:9px;font-weight:700;letter-spacing:.08em">BOARDING PASS</div>
+        <div style="color:rgba(255,255,255,.65);font-size:8px">登机牌副本</div>
+      </div>
+
+      <!-- Stub key info: compact 2-col -->
+      <div class="bp-stub-info">
+        <div class="bp-stub-cell">
+          <div class="bp-micro-label">FLIGHT</div>
+          <div class="bp-stub-val" style="color:#c8102e">CA783</div>
+        </div>
+        <div class="bp-stub-cell">
+          <div class="bp-micro-label">GATE</div>
+          <div class="bp-stub-val" style="color:#c8102e;font-size:22px;font-weight:900">E19</div>
+        </div>
+        <div class="bp-stub-cell">
+          <div class="bp-micro-label">SEAT</div>
+          <div class="bp-stub-val" style="color:#c8102e;font-size:24px;font-weight:900">2C</div>
+        </div>
+        <div class="bp-stub-cell">
+          <div class="bp-micro-label">BOARDING</div>
+          <div class="bp-stub-val">14:10</div>
+        </div>
+      </div>
+
+      <!-- Orienta QR strip -->
+      <div class="bp-orienta-strip">
+        <div class="bp-orienta-header">
+          <span class="bp-o-dot"></span>
+          <span class="bp-o-title">Air China Smart Transfer</span>
+        </div>
+        <div class="bp-o-sub">Scan · Navigate · Connect</div>
+        <div id="qr-DA8X3" class="bp-qr-box"></div>
+        <div class="bp-o-hint">Scan to activate smart navigation</div>
+        <div class="bp-o-url">DA8X3</div>
+      </div>
+
+    </div><!-- /bp-stub -->
+
+  </div><!-- /bp-card -->
+</div><!-- /bp-outer -->
+
+
+<div class="bp-outer">
+  <div class="bp-card">
+
+    <!-- ╔══════════════════════════════════════════════════════╗ -->
+    <!-- ║  MAIN TICKET (left ~73%)                            ║ -->
+    <!-- ╚══════════════════════════════════════════════════════╝ -->
+    <div class="bp-main">
+
+      <!-- Top color bar -->
+      <div class="bp-topbar" style="background:#1a2744">
+        <div class="bp-topbar-left">
+          <svg class="bp-phoenix-svg" viewBox="0 0 28 28">
+            <circle cx="14" cy="14" r="12" fill="rgba(255,255,255,.15)"/>
+            <path d="M14 3 C9.5 5 6 9 7 13 C8 17.5 11.5 19.5 14 25 C16.5 19.5 20 17.5 21 13 C22 9 18.5 5 14 3Z" fill="white" opacity=".9"/>
+            <path d="M7 9 C4.5 11 4 14.5 6 17 L9.5 14Z" fill="white"/>
+            <path d="M21 9 C23.5 11 24 14.5 22 17 L18.5 14Z" fill="white"/>
+            <circle cx="14" cy="13" r="2.2" fill="white"/>
+          </svg>
+          <div>
+            <div class="bp-airline-en">AIR CHINA</div>
+            <div class="bp-airline-cn">中国国际航空</div>
+          </div>
+        </div>
+        <div class="bp-class-pill">ECONOMY / 经济舱</div>
+        <div class="bp-seq-block">
+          <div class="bp-seq-label">SEQ</div>
+          <div class="bp-seq-num">047</div>
+        </div>
+      </div>
+
+      <!-- Passenger row -->
+      <div class="bp-pax-row">
+        <div class="bp-pax-block">
+          <div class="bp-micro-label">PASSENGER NAME / 旅客姓名</div>
+          <div class="bp-pax-name">JIANG YAN</div>
+        </div>
+        <div class="bp-pax-right">
+          <div class="bp-micro-label">DATE / 日期</div>
+          <div class="bp-date">26 MAR 2026</div>
+        </div>
+      </div>
+
+      <!-- Route strip -->
+      <div class="bp-route-strip">
+        <!-- FROM -->
+        <div class="bp-airport-block">
+          <div class="bp-iata">SYD</div>
+          <div class="bp-city-name">SYDNEY</div>
+        </div>
+        <!-- arrow -->
+        <div class="bp-arr">
+          <div class="bp-arr-line"></div>
+          <span class="bp-arr-plane">✈</span>
+        </div>
+        <!-- VIA PEK -->
+        <div class="bp-airport-block bp-via">
+          <div class="bp-iata" style="font-size:22px">PEK</div>
+          <div class="bp-city-name">BEIJING T3E</div>
+          <div class="bp-via-badge">VIA · TRANSFER</div>
+        </div>
+        <!-- arrow -->
+        <div class="bp-arr">
+          <span class="bp-arr-plane">✈</span>
+          <div class="bp-arr-line"></div>
+        </div>
+        <!-- TO -->
+        <div class="bp-airport-block">
+          <div class="bp-iata">CDG</div>
+          <div class="bp-city-name">PARIS</div>
+        </div>
+      </div>
+
+      <!-- Key data row -->
+      <div class="bp-data-row">
+        <div class="bp-data-cell">
+          <div class="bp-micro-label">INBOUND</div>
+          <div class="bp-data-val">CA921</div>
+        </div>
+        <div class="bp-data-cell bp-data-cell-hi" style="--hi:#1a2744">
+          <div class="bp-micro-label">ONWARD FLIGHT</div>
+          <div class="bp-data-val" style="color:#1a2744;font-size:20px">CA837</div>
+        </div>
+        <div class="bp-data-cell bp-data-cell-hi" style="--hi:#1a2744">
+          <div class="bp-micro-label">GATE / 登机口</div>
+          <div class="bp-data-val" style="color:#1a2744;font-size:26px;font-weight:900">E19</div>
+        </div>
+        <div class="bp-data-cell bp-data-cell-hi" style="--hi:#1a2744">
+          <div class="bp-micro-label">SEAT / 座位</div>
+          <div class="bp-data-val" style="color:#1a2744;font-size:28px;font-weight:900;letter-spacing:-1px">14A</div>
+        </div>
+        <div class="bp-data-cell">
+          <div class="bp-micro-label">BOARDING</div>
+          <div class="bp-data-val">14:10</div>
+        </div>
+        <div class="bp-data-cell">
+          <div class="bp-micro-label">DEPARTS</div>
+          <div class="bp-data-val">14:40</div>
+        </div>
+        <div class="bp-data-cell">
+          <div class="bp-micro-label">ZONE</div>
+          <div class="bp-data-val">3</div>
+        </div>
+      </div>
+
+      <!-- Barcode row -->
+      <div class="bp-barcode-row">
+        <div class="bp-barcode-wrap">
+          <svg xmlns="http://www.w3.org/2000/svg" width="160" height="36" viewBox="0 0 160 36"><rect width="160" height="36" fill="white"/><rect x="6" y="0" width="2" height="36" fill="black"/><rect x="8" y="0" width="3" height="36" fill="black"/><rect x="11" y="0" width="2" height="36" fill="black"/><rect x="13" y="0" width="2" height="36" fill="black"/><rect x="17" y="0" width="1" height="36" fill="black"/><rect x="21" y="0" width="2" height="36" fill="black"/><rect x="25" y="0" width="3" height="36" fill="black"/><rect x="28" y="0" width="1" height="36" fill="black"/><rect x="36" y="0" width="2" height="36" fill="black"/><rect x="38" y="0" width="2" height="36" fill="black"/><rect x="41" y="0" width="1" height="36" fill="black"/><rect x="45" y="0" width="2" height="36" fill="black"/><rect x="47" y="0" width="1" height="36" fill="black"/><rect x="52" y="0" width="2" height="36" fill="black"/><rect x="56" y="0" width="2" height="36" fill="black"/><rect x="60" y="0" width="1" height="36" fill="black"/><rect x="61" y="0" width="1" height="36" fill="black"/><rect x="62" y="0" width="1" height="36" fill="black"/><rect x="65" y="0" width="2" height="36" fill="black"/><rect x="68" y="0" width="3" height="36" fill="black"/><rect x="72" y="0" width="3" height="36" fill="black"/><rect x="81" y="0" width="1" height="36" fill="black"/><rect x="84" y="0" width="1" height="36" fill="black"/><rect x="85" y="0" width="1" height="36" fill="black"/><rect x="86" y="0" width="1" height="36" fill="black"/><rect x="87" y="0" width="1" height="36" fill="black"/><rect x="89" y="0" width="1" height="36" fill="black"/><rect x="90" y="0" width="1" height="36" fill="black"/><rect x="96" y="0" width="1" height="36" fill="black"/><rect x="97" y="0" width="1" height="36" fill="black"/><rect x="98" y="0" width="1" height="36" fill="black"/><rect x="99" y="0" width="2" height="36" fill="black"/><rect x="108" y="0" width="3" height="36" fill="black"/><rect x="111" y="0" width="1" height="36" fill="black"/><rect x="112" y="0" width="3" height="36" fill="black"/><rect x="116" y="0" width="2" height="36" fill="black"/><rect x="118" y="0" width="1" height="36" fill="black"/><rect x="119" y="0" width="2" height="36" fill="black"/><rect x="122" y="0" width="1" height="36" fill="black"/><rect x="123" y="0" width="1" height="36" fill="black"/><rect x="126" y="0" width="1" height="36" fill="black"/><rect x="128" y="0" width="3" height="36" fill="black"/><rect x="132" y="0" width="3" height="36" fill="black"/><rect x="135" y="0" width="2" height="36" fill="black"/><rect x="139" y="0" width="1" height="36" fill="black"/><rect x="141" y="0" width="1" height="36" fill="black"/><rect x="142" y="0" width="1" height="36" fill="black"/><rect x="149" y="0" width="2" height="36" fill="black"/><rect x="154" y="0" width="1" height="36" fill="black"/></svg>
+        </div>
+        <div class="bp-barcode-txt">DB5K7 · CA837 · CDG · 14A</div>
+      </div>
+
+    </div><!-- /bp-main -->
+
+    <!-- Perforation -->
+    <div class="bp-perf"></div>
+
+    <!-- ╔══════════════════════╗ -->
+    <!-- ║  STUB (right ~27%)  ║ -->
+    <!-- ╚══════════════════════╝ -->
+    <div class="bp-stub">
+
+      <!-- Stub header -->
+      <div class="bp-stub-header" style="background:#1a2744">
+        <div style="color:white;font-size:9px;font-weight:700;letter-spacing:.08em">BOARDING PASS</div>
+        <div style="color:rgba(255,255,255,.65);font-size:8px">登机牌副本</div>
+      </div>
+
+      <!-- Stub key info: compact 2-col -->
+      <div class="bp-stub-info">
+        <div class="bp-stub-cell">
+          <div class="bp-micro-label">FLIGHT</div>
+          <div class="bp-stub-val" style="color:#1a2744">CA837</div>
+        </div>
+        <div class="bp-stub-cell">
+          <div class="bp-micro-label">GATE</div>
+          <div class="bp-stub-val" style="color:#1a2744;font-size:22px;font-weight:900">E19</div>
+        </div>
+        <div class="bp-stub-cell">
+          <div class="bp-micro-label">SEAT</div>
+          <div class="bp-stub-val" style="color:#1a2744;font-size:24px;font-weight:900">14A</div>
+        </div>
+        <div class="bp-stub-cell">
+          <div class="bp-micro-label">BOARDING</div>
+          <div class="bp-stub-val">14:10</div>
+        </div>
+      </div>
+
+      <!-- Orienta QR strip -->
+      <div class="bp-orienta-strip">
+        <div class="bp-orienta-header">
+          <span class="bp-o-dot"></span>
+          <span class="bp-o-title">Air China Smart Transfer</span>
+        </div>
+        <div class="bp-o-sub">Scan · Navigate · Connect</div>
+        <div id="qr-DB5K7" class="bp-qr-box"></div>
+        <div class="bp-o-hint">Scan to activate smart navigation</div>
+        <div class="bp-o-url">DB5K7</div>
+      </div>
+
+    </div><!-- /bp-stub -->
+
+  </div><!-- /bp-card -->
+</div><!-- /bp-outer -->
+
+
+<div class="bp-outer">
+  <div class="bp-card">
+
+    <!-- ╔══════════════════════════════════════════════════════╗ -->
+    <!-- ║  MAIN TICKET (left ~73%)                            ║ -->
+    <!-- ╚══════════════════════════════════════════════════════╝ -->
+    <div class="bp-main">
+
+      <!-- Top color bar -->
+      <div class="bp-topbar" style="background:#1a2744">
+        <div class="bp-topbar-left">
+          <svg class="bp-phoenix-svg" viewBox="0 0 28 28">
+            <circle cx="14" cy="14" r="12" fill="rgba(255,255,255,.15)"/>
+            <path d="M14 3 C9.5 5 6 9 7 13 C8 17.5 11.5 19.5 14 25 C16.5 19.5 20 17.5 21 13 C22 9 18.5 5 14 3Z" fill="white" opacity=".9"/>
+            <path d="M7 9 C4.5 11 4 14.5 6 17 L9.5 14Z" fill="white"/>
+            <path d="M21 9 C23.5 11 24 14.5 22 17 L18.5 14Z" fill="white"/>
+            <circle cx="14" cy="13" r="2.2" fill="white"/>
+          </svg>
+          <div>
+            <div class="bp-airline-en">AIR CHINA</div>
+            <div class="bp-airline-cn">中国国际航空</div>
+          </div>
+        </div>
+        <div class="bp-class-pill">ECONOMY / 经济舱</div>
+        <div class="bp-seq-block">
+          <div class="bp-seq-label">SEQ</div>
+          <div class="bp-seq-num">089</div>
+        </div>
+      </div>
+
+      <!-- Passenger row -->
+      <div class="bp-pax-row">
+        <div class="bp-pax-block">
+          <div class="bp-micro-label">PASSENGER NAME / 旅客姓名</div>
+          <div class="bp-pax-name">SOPHIE CHEN</div>
+        </div>
+        <div class="bp-pax-right">
+          <div class="bp-micro-label">DATE / 日期</div>
+          <div class="bp-date">26 MAR 2026</div>
+        </div>
+      </div>
+
+      <!-- Route strip -->
+      <div class="bp-route-strip">
+        <!-- FROM -->
+        <div class="bp-airport-block">
+          <div class="bp-iata">FRA</div>
+          <div class="bp-city-name">FRANKFURT</div>
+        </div>
+        <!-- arrow -->
+        <div class="bp-arr">
+          <div class="bp-arr-line"></div>
+          <span class="bp-arr-plane">✈</span>
+        </div>
+        <!-- VIA PEK -->
+        <div class="bp-airport-block bp-via">
+          <div class="bp-iata" style="font-size:22px">PEK</div>
+          <div class="bp-city-name">BEIJING T3E</div>
+          <div class="bp-via-badge">VIA · TRANSFER</div>
+        </div>
+        <!-- arrow -->
+        <div class="bp-arr">
+          <span class="bp-arr-plane">✈</span>
+          <div class="bp-arr-line"></div>
+        </div>
+        <!-- TO -->
+        <div class="bp-airport-block">
+          <div class="bp-iata">CDG</div>
+          <div class="bp-city-name">PARIS</div>
+        </div>
+      </div>
+
+      <!-- Key data row -->
+      <div class="bp-data-row">
+        <div class="bp-data-cell">
+          <div class="bp-micro-label">INBOUND</div>
+          <div class="bp-data-val">CA783</div>
+        </div>
+        <div class="bp-data-cell bp-data-cell-hi" style="--hi:#1a2744">
+          <div class="bp-micro-label">ONWARD FLIGHT</div>
+          <div class="bp-data-val" style="color:#1a2744;font-size:20px">CA903</div>
+        </div>
+        <div class="bp-data-cell bp-data-cell-hi" style="--hi:#1a2744">
+          <div class="bp-micro-label">GATE / 登机口</div>
+          <div class="bp-data-val" style="color:#1a2744;font-size:26px;font-weight:900">E19</div>
+        </div>
+        <div class="bp-data-cell bp-data-cell-hi" style="--hi:#1a2744">
+          <div class="bp-micro-label">SEAT / 座位</div>
+          <div class="bp-data-val" style="color:#1a2744;font-size:28px;font-weight:900;letter-spacing:-1px">28F</div>
+        </div>
+        <div class="bp-data-cell">
+          <div class="bp-micro-label">BOARDING</div>
+          <div class="bp-data-val">14:10</div>
+        </div>
+        <div class="bp-data-cell">
+          <div class="bp-micro-label">DEPARTS</div>
+          <div class="bp-data-val">14:40</div>
+        </div>
+        <div class="bp-data-cell">
+          <div class="bp-micro-label">ZONE</div>
+          <div class="bp-data-val">4</div>
+        </div>
+      </div>
+
+      <!-- Barcode row -->
+      <div class="bp-barcode-row">
+        <div class="bp-barcode-wrap">
+          <svg xmlns="http://www.w3.org/2000/svg" width="160" height="36" viewBox="0 0 160 36"><rect width="160" height="36" fill="white"/><rect x="6" y="0" width="2" height="36" fill="black"/><rect x="8" y="0" width="3" height="36" fill="black"/><rect x="11" y="0" width="2" height="36" fill="black"/><rect x="13" y="0" width="2" height="36" fill="black"/><rect x="17" y="0" width="1" height="36" fill="black"/><rect x="21" y="0" width="2" height="36" fill="black"/><rect x="25" y="0" width="3" height="36" fill="black"/><rect x="28" y="0" width="1" height="36" fill="black"/><rect x="36" y="0" width="2" height="36" fill="black"/><rect x="38" y="0" width="2" height="36" fill="black"/><rect x="41" y="0" width="1" height="36" fill="black"/><rect x="45" y="0" width="2" height="36" fill="black"/><rect x="47" y="0" width="1" height="36" fill="black"/><rect x="52" y="0" width="2" height="36" fill="black"/><rect x="56" y="0" width="2" height="36" fill="black"/><rect x="60" y="0" width="1" height="36" fill="black"/><rect x="61" y="0" width="1" height="36" fill="black"/><rect x="62" y="0" width="1" height="36" fill="black"/><rect x="65" y="0" width="2" height="36" fill="black"/><rect x="68" y="0" width="3" height="36" fill="black"/><rect x="72" y="0" width="3" height="36" fill="black"/><rect x="81" y="0" width="1" height="36" fill="black"/><rect x="84" y="0" width="1" height="36" fill="black"/><rect x="85" y="0" width="1" height="36" fill="black"/><rect x="86" y="0" width="1" height="36" fill="black"/><rect x="87" y="0" width="1" height="36" fill="black"/><rect x="89" y="0" width="1" height="36" fill="black"/><rect x="90" y="0" width="1" height="36" fill="black"/><rect x="96" y="0" width="1" height="36" fill="black"/><rect x="97" y="0" width="1" height="36" fill="black"/><rect x="98" y="0" width="1" height="36" fill="black"/><rect x="99" y="0" width="2" height="36" fill="black"/><rect x="108" y="0" width="3" height="36" fill="black"/><rect x="111" y="0" width="1" height="36" fill="black"/><rect x="112" y="0" width="3" height="36" fill="black"/><rect x="116" y="0" width="2" height="36" fill="black"/><rect x="118" y="0" width="1" height="36" fill="black"/><rect x="119" y="0" width="2" height="36" fill="black"/><rect x="122" y="0" width="1" height="36" fill="black"/><rect x="123" y="0" width="1" height="36" fill="black"/><rect x="126" y="0" width="1" height="36" fill="black"/><rect x="128" y="0" width="3" height="36" fill="black"/><rect x="132" y="0" width="3" height="36" fill="black"/><rect x="135" y="0" width="2" height="36" fill="black"/><rect x="139" y="0" width="1" height="36" fill="black"/><rect x="141" y="0" width="1" height="36" fill="black"/><rect x="142" y="0" width="1" height="36" fill="black"/><rect x="149" y="0" width="2" height="36" fill="black"/><rect x="154" y="0" width="1" height="36" fill="black"/></svg>
+        </div>
+        <div class="bp-barcode-txt">DC2N9 · CA903 · CDG · 28F</div>
+      </div>
+
+    </div><!-- /bp-main -->
+
+    <!-- Perforation -->
+    <div class="bp-perf"></div>
+
+    <!-- ╔══════════════════════╗ -->
+    <!-- ║  STUB (right ~27%)  ║ -->
+    <!-- ╚══════════════════════╝ -->
+    <div class="bp-stub">
+
+      <!-- Stub header -->
+      <div class="bp-stub-header" style="background:#1a2744">
+        <div style="color:white;font-size:9px;font-weight:700;letter-spacing:.08em">BOARDING PASS</div>
+        <div style="color:rgba(255,255,255,.65);font-size:8px">登机牌副本</div>
+      </div>
+
+      <!-- Stub key info: compact 2-col -->
+      <div class="bp-stub-info">
+        <div class="bp-stub-cell">
+          <div class="bp-micro-label">FLIGHT</div>
+          <div class="bp-stub-val" style="color:#1a2744">CA903</div>
+        </div>
+        <div class="bp-stub-cell">
+          <div class="bp-micro-label">GATE</div>
+          <div class="bp-stub-val" style="color:#1a2744;font-size:22px;font-weight:900">E19</div>
+        </div>
+        <div class="bp-stub-cell">
+          <div class="bp-micro-label">SEAT</div>
+          <div class="bp-stub-val" style="color:#1a2744;font-size:24px;font-weight:900">28F</div>
+        </div>
+        <div class="bp-stub-cell">
+          <div class="bp-micro-label">BOARDING</div>
+          <div class="bp-stub-val">14:10</div>
+        </div>
+      </div>
+
+      <!-- Orienta QR strip -->
+      <div class="bp-orienta-strip">
+        <div class="bp-orienta-header">
+          <span class="bp-o-dot"></span>
+          <span class="bp-o-title">Air China Smart Transfer</span>
+        </div>
+        <div class="bp-o-sub">Scan · Navigate · Connect</div>
+        <div id="qr-DC2N9" class="bp-qr-box"></div>
+        <div class="bp-o-hint">Scan to activate smart navigation</div>
+        <div class="bp-o-url">DC2N9</div>
+      </div>
+
+    </div><!-- /bp-stub -->
+
+  </div><!-- /bp-card -->
+</div><!-- /bp-outer -->
+
+
+<script>
+window.addEventListener('load', function() {
+  new QRCode(document.getElementById("qr-DA8X3"), { text: "https://orienta-v2-step2.onrender.com/pax?pid=DA8X3&flight=CA783&seat=2C&name=SIYAO%20FU&lang=zh", width: 76, height: 76, correctLevel: QRCode.CorrectLevel.M });
+  new QRCode(document.getElementById("qr-DB5K7"), { text: "https://orienta-v2-step2.onrender.com/pax?pid=DB5K7&flight=CA837&seat=14A&name=JIANG%20YAN&lang=en", width: 76, height: 76, correctLevel: QRCode.CorrectLevel.M });
+  new QRCode(document.getElementById("qr-DC2N9"), { text: "https://orienta-v2-step2.onrender.com/pax?pid=DC2N9&flight=CA903&seat=28F&name=SOPHIE%20CHEN&lang=ja", width: 76, height: 76, correctLevel: QRCode.CorrectLevel.M });
+});
+</script>
+</body>
+</html>
