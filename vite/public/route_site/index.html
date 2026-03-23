@@ -11,11 +11,15 @@
     --bg:#0f1012; --panel:#121316; --ink:#fff; --muted:#9aa0a6; --edge:#1d1f23;
     --brand:#00c853; --past:#b0b0b0; --accent:#22d3ee;
     --card-radius:20px; --shadow:0 8px 22px rgba(0,0,0,.45);
-    --video-bottom-reserve:140px;
+    --video-bottom-reserve:0px;
     --map-peek:28px;
-    --map-open-height:min(40dvh,320px);
-    --map-min-height:180px;
+    --map-open-height:min(44dvh,360px);
+    --map-min-height:198px;
     --reco-max-height:min(34dvh,220px);
+  }
+  html{
+    height:100%;
+    height:-webkit-fill-available;
   }
   html,body{
     margin:0;
@@ -23,23 +27,32 @@
     color:var(--ink);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
     height:100%;
+    max-height:100vh;
+    max-height:100dvh;
     overflow:hidden;
+    box-sizing:border-box;
+    overscroll-behavior-y:none;
+    overscroll-behavior-x:none;
   }
   .phone{
     width:100%;
     max-width:none;
     margin:0 auto;
-    min-height:100vh;
+    min-height:100%;
     min-height:100dvh;
-    height:100vh;
-    height:100dvh;
+    height:100%;
+    max-height:100vh;
     max-height:100dvh;
     display:flex;
     flex-direction:column;
     gap:0;
     padding:0;
+    padding-bottom:env(safe-area-inset-bottom,0px);
     box-sizing:border-box;
     overflow:hidden;
+    position:relative;
+    overscroll-behavior:none;
+    touch-action:manipulation;
   }
   .card{
     background:var(--panel);
@@ -128,13 +141,11 @@
     opacity:.9;
     border:1px solid #222;
   }
-  .badge.tr{right:10px;top:10px}
+  .badge.tr{right:10px;top:10px;z-index:30}
   .video-map-container{
     position:relative;
-    display:block;
-    min-height:100%;
-    height:100%;
-    max-height:100%;
+    flex:1 1 0;
+    min-height:0;
     width:100%;
     overflow:hidden;
     background:#000;
@@ -142,7 +153,8 @@
   .video-map-container .video-row{
     position:absolute;
     inset:0;
-    display:block;
+    display:flex;
+    flex-direction:column;
     min-height:0;
     overflow:hidden;
   }
@@ -161,16 +173,27 @@
     bottom:calc(8px + env(safe-area-inset-bottom));
     height:var(--map-open-height);
     min-height:var(--map-min-height);
+    max-height:min(88dvh,calc(100dvh - env(safe-area-inset-top,0px) - 48px));
     transition:transform .25s ease;
     transform:translateY(calc(100% - var(--map-peek)));
     z-index:30;
+    display:flex;
+    flex-direction:column;
+    min-height:0;
   }
   .video-map-container.map-open .pager-section{
     transform:translateY(0);
   }
-  .video-main{ flex:1; min-width:0; min-height:0; display:flex; flex-direction:column; }
+  .video-main{
+    flex:1 1 0;
+    min-width:0;
+    min-height:0;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
   #videoWrap{
-    flex:1;
+    flex:1 1 0;
     min-height:0;
     display:flex;
     align-items:center;
@@ -183,24 +206,23 @@
   }
   #videoWrap video{
     width:100%;
-    height:100%;
     max-width:100%;
-    max-height:100%;
+    align-self:stretch;
+    flex:1 1 0;
     min-height:0;
+    height:100%;
+    max-height:100%;
     object-fit:contain;
     object-position:center center;
     display:block;
     background:#000;
   }
   @media (min-width: 900px){
-    /* Desktop/laptop: cap video height so it never overgrows viewport. */
-    #videoWrap{
-      padding-bottom:0;
-    }
     #videoWrap video{
       width:auto;
-      height:calc(100% - var(--video-bottom-reserve));
-      max-height:min(82vh, calc(100% - var(--video-bottom-reserve)));
+      max-width:100%;
+      height:100%;
+      max-height:min(92vh, 100%);
     }
   }
   canvas{
@@ -215,14 +237,41 @@
   .pager{
     overflow:hidden;
     border-radius:var(--card-radius);
+    display:flex;
+    flex-direction:column;
+    min-height:0;
+  }
+  .pager > .pages{
+    flex:1 1 0;
+    min-height:0;
+    min-width:0;
+  }
+  .pager > .pages > .page{
+    height:100%;
+    min-height:0;
   }
   .map-drag-handle{
-    width:46px;
-    height:5px;
+    width:100%;
+    max-width:180px;
+    height:28px;
+    margin:2px auto 0;
+    flex-shrink:0;
+    padding:0;
+    border:0;
+    background:transparent;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    opacity:.9;
+    -webkit-tap-highlight-color:transparent;
+    touch-action:none;
+  }
+  .map-drag-handle::after{
+    content:"";
+    width:40px;
+    height:4px;
     border-radius:99px;
     background:#566174;
-    margin:8px auto 6px auto;
-    opacity:.9;
   }
   .pages{
     display:flex;
@@ -239,6 +288,7 @@
     justify-content:center;
     gap:10px;
     padding:6px 0;
+    flex-shrink:0;
   }
   .dot{
     width:10px;
@@ -251,14 +301,15 @@
   .dot.active{background:#fff;}
   .dash{
     position:absolute;
-    left:12px;
-    right:12px;
-    bottom:calc(62px + env(safe-area-inset-bottom));
-    z-index:24;
-    background:linear-gradient(to top, rgba(14,14,14,0.84), rgba(14,14,14,0.66));
+    left:10px;
+    right:10px;
+    top:auto;
+    bottom:calc(58px + env(safe-area-inset-bottom,0px));
+    z-index:22;
+    background:linear-gradient(to top, rgba(14,14,14,0.9), rgba(14,14,14,0.55));
     border:1px solid rgba(255,255,255,0.12);
     border-radius:12px;
-    box-shadow:0 10px 26px rgba(0,0,0,0.5);
+    box-shadow:0 10px 26px rgba(0,0,0,0.45);
     backdrop-filter: blur(8px);
     padding:8px;
     display:flex;
@@ -266,10 +317,10 @@
     gap:6px;
     overflow:auto;
     max-height:min(22dvh,120px);
-    transition:opacity .2s ease, transform .2s ease;
-    opacity:1;
-    pointer-events:auto;
-    transform:translateY(0);
+    transition:opacity .22s ease, transform .22s ease;
+    opacity:0;
+    pointer-events:none;
+    transform:translateY(10px);
   }
   .phone.controls-visible .dash{
     opacity:1;
@@ -367,8 +418,8 @@
   }
   @media (max-height: 760px){
     .pager-section{
-      height:min(36dvh,250px);
-      min-height:150px;
+      height:min(42dvh,280px);
+      min-height:165px;
     }
     .dash{
       left:8px;
@@ -381,6 +432,26 @@
       height:36px;
       font-size:13px;
     }
+  }
+  /* Phones: less bottom padding + slightly smaller map sheet so video + UI fit one screen */
+  @media (max-width: 600px){
+    :root{
+      --video-bottom-reserve:0px;
+      --map-peek:24px;
+      --map-open-height:min(38dvh,280px);
+      --map-min-height:152px;
+      --reco-max-height:min(28dvh,180px);
+    }
+    .badge.tr{ font-size:11px; padding:3px 8px; right:8px; top:8px; }
+    .dash{
+      left:6px;
+      right:6px;
+      bottom:calc(48px + env(safe-area-inset-bottom,0px));
+      max-height:min(20dvh,108px);
+      padding:6px;
+    }
+    .row{ gap:6px; flex-wrap:wrap; }
+    .yt-progress{ min-width:0; }
   }
   .gate-checkpoint-overlay{
     position:fixed;
@@ -437,6 +508,22 @@
       <section class="card media" id="videoWrap">
         <span class="badge tr" id="badgeVideo">旅客</span>
         <video id="vid" src="sfo_videoroute_E_to_F.MP4?t=1772303658" playsinline webkit-playsinline preload="auto" controls></video>
+        <section class="dash">
+          <div class="row" id="rowA">
+            <button class="yt-icon-btn" id="playPause" aria-label="播放/暂停">▶</button>
+            <span class="yt-time" id="timeLabel">0:00 / 0:00</span>
+            <select class="speed-select" id="speedSelect" aria-label="播放速度">
+              <option value="0.5">0.5x</option>
+              <option value="0.75">0.75x</option>
+              <option value="1" selected>1x</option>
+              <option value="1.25">1.25x</option>
+              <option value="1.5">1.5x</option>
+              <option value="1.75">1.75x</option>
+              <option value="2">2.0x</option>
+            </select>
+            <input class="timeline yt-progress" id="timeline" type="range" min="0" max="1000" value="0" step="1"/>
+          </div>
+        </section>
         <div class="amenities-video-overlay" id="amenitiesVideoOverlay">
           <div class="amenities-drawer-handle"></div>
           <div class="amenities-drawer-title">推荐商店</div>
@@ -450,9 +537,8 @@
     <div class="map-drag-handle" id="mapDragHandle"></div>
     <div class="pages" id="pages">
       <div class="page" id="pagePeople">
-        <div class="media" id="mediaPeople" style="position:relative;min-height:280px">
-          <span class="badge tr" id="badgeMapP">交互导航地图（Apple 地图）</span>
-          <div id="mapPeople" style="width:100%;height:280px;background:#1a1a1a"></div>
+        <div class="media" id="mediaPeople" style="position:relative;flex:1;min-height:0;display:flex;flex-direction:column">
+          <div id="mapPeople" style="width:100%;flex:1;min-height:300px;background:#1a1a1a"></div>
         </div>
       </div>
       <div class="page" id="pageLuggage">
@@ -470,23 +556,6 @@
   </div>
 
   <div class="info" id="info">--</div>
-
-  <section class="dash">
-    <div class="row" id="rowA">
-      <button class="yt-icon-btn" id="playPause" aria-label="播放/暂停">▶</button>
-      <span class="yt-time" id="timeLabel">0:00 / 0:00</span>
-      <select class="speed-select" id="speedSelect" aria-label="播放速度">
-        <option value="0.5">0.5x</option>
-        <option value="0.75">0.75x</option>
-        <option value="1" selected>1x</option>
-        <option value="1.25">1.25x</option>
-        <option value="1.5">1.5x</option>
-        <option value="1.75">1.75x</option>
-        <option value="2">2.0x</option>
-      </select>
-      <input class="timeline yt-progress" id="timeline" type="range" min="0" max="1000" value="0" step="1"/>
-    </div>
-  </section>
 
   <!-- Gate checkpoint modal: "Did you get to Gate X?" -->
   <div class="gate-checkpoint-overlay" id="gateCheckpointOverlay" aria-hidden="true">
@@ -544,7 +613,7 @@ function orientaLoadPekRowsSync_() {
   var b = document.getElementById('badgeVideo');
   if (b) b.textContent = '首都机场 T3E · 室内路线';
   var bp = document.getElementById('badgeMapP');
-  if (bp) bp.textContent = '室外地图（PEK）· 与室内视频独立';
+  if (bp) bp.textContent = '室外地图（PEK）';
   try {
     var xhr = new XMLHttpRequest();
     xhr.open('GET', 'PEK_gate_timestamp.csv', false);
@@ -1295,8 +1364,8 @@ function setPage(i){
 }
 applyPage(0);
 
-// swipe via pointer events (touch + mouse)
-pager.style.touchAction = 'pan-y';
+// Horizontal only: avoids vertical touches turning into parent/iframe overscroll or pull-to-refresh
+pager.style.touchAction = 'pan-x';
 let swipePtrId = null, swipeStartX = null, swipeLastX = null;
 pager.addEventListener('pointerdown', e => {
   if (e.button !== 0 && e.pointerType === 'mouse') return;
@@ -1329,11 +1398,9 @@ pager.addEventListener('pointerleave', e => { if (e.pointerId === swipePtrId) en
 // ---------- video/map + recommendation panels ----------
 const videoMapContainer = document.getElementById('videoMapContainer');
 const videoWrap = document.getElementById('videoWrap');
-const dashEl = document.querySelector('.dash');
 const PANEL_DRAG_THRESHOLD = 45;
 let mapOpen = false;
 let recoOpen = false;
-const hasHoverPointer = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 let controlsHideTimer = null;
 
 function setControlsVisible(visible, autoHideMs = 0) {
@@ -1359,21 +1426,17 @@ function updateViewportLayout() {
   const root = document.documentElement;
 
   // Keep a small visible map handle when collapsed.
-  root.style.setProperty('--map-peek', (isLandscape ? 20 : 28) + 'px');
+  root.style.setProperty('--map-peek', (isLandscape ? 20 : 26) + 'px');
 
-  // Dynamic map panel height by orientation.
+  // Dynamic map panel height by orientation (slightly taller sheet = more map).
   const openH = isLandscape
-    ? Math.max(140, Math.min(Math.round(vh * 0.62), 300))
-    : Math.max(190, Math.min(Math.round(vh * 0.42), 320));
+    ? Math.max(150, Math.min(Math.round(vh * 0.66), 340))
+    : Math.max(200, Math.min(Math.round(vh * 0.48), 368));
   root.style.setProperty('--map-open-height', openH + 'px');
-  root.style.setProperty('--map-min-height', (isLandscape ? 120 : 170) + 'px');
+  root.style.setProperty('--map-min-height', (isLandscape ? 128 : 188) + 'px');
 
-  // Reserve space so video doesn't sit behind floating controls/tabs.
-  const dash = document.querySelector('.dash');
-  const dashH = dash ? dash.getBoundingClientRect().height : 0;
-  let reserve = Math.max(64, Math.ceil(dashH + 86));
-  reserve = Math.min(reserve, Math.round(vh * (isLandscape ? 0.5 : 0.58)));
-  root.style.setProperty('--video-bottom-reserve', reserve + 'px');
+  // Custom .dash overlays bottom of #videoWrap (above map peek); video uses full frame height.
+  root.style.setProperty('--video-bottom-reserve', '0px');
 
   // Recommended stores drawer height adapts by orientation and viewport height.
   const recoMax = isLandscape
@@ -1410,40 +1473,33 @@ if (window.visualViewport) {
   window.visualViewport.addEventListener('resize', updateViewportLayout, { passive: true });
 }
 
-// Controls visibility behavior:
-// Desktop/laptop: visible on hover over video/control area.
-// Touch devices: visible temporarily when user touches the screen.
-if (hasHoverPointer) {
-  if (videoWrap) {
-    videoWrap.addEventListener('mouseenter', () => setControlsVisible(true));
-    videoWrap.addEventListener('mouseleave', () => setControlsVisible(false));
-  }
-  if (dashEl) {
-    dashEl.addEventListener('mouseenter', () => setControlsVisible(true));
-    dashEl.addEventListener('mouseleave', () => setControlsVisible(false));
-  }
-} else {
-  const showOnTouch = () => setControlsVisible(true, 2200);
-  if (videoWrap) videoWrap.addEventListener('touchstart', showOnTouch, { passive: true });
-  if (dashEl) dashEl.addEventListener('touchstart', showOnTouch, { passive: true });
+// Custom control bar (.dash): hidden until user taps/clicks the screen; auto-hide after idle (like full-screen video UX).
+const CONTROLS_AUTO_HIDE_MS = 3400;
+const CONTROLS_AUTO_HIDE_MS_SCRUB = 12000;
+if (phoneRoot) {
+  phoneRoot.addEventListener('pointerdown', function orientaControlsArm(ev) {
+    const t = ev.target;
+    if (t && t.closest && t.closest('.gate-checkpoint-overlay')) return;
+    const onDash = t && t.closest && t.closest('.dash');
+    setControlsVisible(true, onDash ? CONTROLS_AUTO_HIDE_MS_SCRUB : CONTROLS_AUTO_HIDE_MS);
+  }, { passive: true });
 }
 
 function setupVerticalDrag(el, onDown, onMove, onUp) {
   let ptrId = null, startY = null, startX = null, tracking = false;
   el.addEventListener('pointerdown', e => {
     if (e.pointerType === 'mouse' && e.button !== 2) return;
-    // Do not hijack native touch interactions on <video> controls (mobile play/pause/seek).
-    if (e.pointerType !== 'mouse' && e.target && e.target.tagName === 'VIDEO') return;
     if (onDown && onDown(e) === false) return;
     if (e.button === 2) e.preventDefault();
     tracking = true;
     ptrId = e.pointerId; startY = e.clientY; startX = e.clientX;
-    el.setPointerCapture(e.pointerId);
+    try { el.setPointerCapture(e.pointerId); } catch (err) {}
   });
   el.addEventListener('contextmenu', e => { if (e.target === el || el.contains(e.target)) e.preventDefault(); });
   el.addEventListener('pointermove', e => {
     if (!tracking || e.pointerId !== ptrId || startY === null) return;
     const dy = e.clientY - startY, dx = e.clientX - startX;
+    if (e.cancelable && (Math.abs(dy) > 4 || Math.abs(dx) > 4)) e.preventDefault();
     if (onMove) onMove(e, dx, dy);
   });
   function end(e) {
@@ -1460,9 +1516,16 @@ function setupVerticalDrag(el, onDown, onMove, onUp) {
 
 // Video gestures:
 // - swipe up/down => open/close map
-// - swipe left/right => open/close recommendations
-setupVerticalDrag(videoWrap, null, null, (e, dx, dy) => {
+// - swipe left/right => open/close recommendations (ignored if gesture started on <video> so seeks/controls still work)
+let videoWrapGestureFromVideo = false;
+setupVerticalDrag(videoWrap, (e) => {
+  videoWrapGestureFromVideo = !!(e.target && e.target.tagName === 'VIDEO');
+  return true;
+}, null, (e, dx, dy) => {
+  const fromVideo = videoWrapGestureFromVideo;
+  videoWrapGestureFromVideo = false;
   if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > PANEL_DRAG_THRESHOLD) {
+    if (fromVideo) return;
     if (dx < 0) setRecoOpen(true);
     if (dx > 0) setRecoOpen(false);
     return;
@@ -1473,11 +1536,16 @@ setupVerticalDrag(videoWrap, null, null, (e, dx, dy) => {
   }
 });
 
-// Map sheet vertical gestures
+// Map sheet vertical gestures (large hit target around drag pill + horizontal padding)
 setupVerticalDrag(pager, (e) => {
   if (!mapDragHandle) return false;
   const r = mapDragHandle.getBoundingClientRect();
-  const inHandleZone = e.clientY >= (r.top - 12) && e.clientY <= (r.bottom + 12);
+  const padX = 52;
+  const padTop = 14;
+  const padBot = 10;
+  const inHandleZone =
+    e.clientX >= r.left - padX && e.clientX <= r.right + padX &&
+    e.clientY >= r.top - padTop && e.clientY <= r.bottom + padBot;
   return inHandleZone;
 }, null, (e, dx, dy) => {
   if (Math.abs(dx) > Math.abs(dy)) return;
