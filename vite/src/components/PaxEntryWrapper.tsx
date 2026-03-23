@@ -58,8 +58,8 @@ function buildPaxFlightSrc(
 function demoGatePairForPid(pid: string): { gateFrom: string; gateTo: string } {
   // gateFrom = arrival gate, gateTo = departure gate
   if (pid === "TX1") return { gateFrom: "E16", gateTo: "E19" };
-  if (pid === "TX2") return { gateFrom: "E15", gateTo: "E19" };
-  if (pid === "TX3") return { gateFrom: "E15", gateTo: "E19" };
+  if (pid === "TX2") return { gateFrom: "E18", gateTo: "E19" };
+  if (pid === "TX3") return { gateFrom: "E17", gateTo: "E19" };
   return { gateFrom: "E16", gateTo: "E19" };
 }
 
@@ -100,6 +100,9 @@ export default function PaxEntryWrapper() {
   }, []);
   const tenantId = useMemo(() => qs("tenant") || "airchina", []);
 
+  // Demo QR passengers: always bypass login and go straight to pax.html (dialog + video).
+  const isDemoQrPid = pid === "TX1" || pid === "TX2" || pid === "TX3";
+
   const spawn = useMemo(() => parseSpawnFromQuery(qs), []);
   const incomingName = useMemo(() => (qs("name") || "").trim(), []);
   const incomingPlanRaw = useMemo(() => (qs("plan") || "").trim().toLowerCase(), []);
@@ -128,8 +131,8 @@ export default function PaxEntryWrapper() {
    * We skip login and go directly to pax.html (dialog + video).
    */
   const skipToPaxDialogAndVideo = useMemo(
-    () => !!prefillFlight || (!!prefillArr && !!prefillDep),
-    [prefillFlight, prefillArr, prefillDep]
+    () => isDemoQrPid || !!prefillFlight || (!!prefillArr && !!prefillDep),
+    [isDemoQrPid, prefillFlight, prefillArr, prefillDep]
   );
 
   const [iframeSrc, setIframeSrc] = useState<string>(() => {
