@@ -81,6 +81,9 @@ function buildPaxDialogVideoSrc(
   const { gateFrom, gateTo } = demoGatePairForPid(pid);
   u.searchParams.set("gateFrom", gateFrom);
   u.searchParams.set("gateTo", gateTo);
+  // Demo mode: avoid pausing the PEK video at intermediate gate checkpoints.
+  // This keeps the back-office trajectory streaming so TX2/TX3 are visible.
+  u.searchParams.set("autoGate", "1");
 
   appendSpawnParams(u, spawn);
   return u.pathname + "?" + u.searchParams.toString();

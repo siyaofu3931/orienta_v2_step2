@@ -905,6 +905,16 @@ const W  = cvP ? cvP.width : 0,  H  = cvP ? cvP.height : 0;
 const W2 = cvL ? cvL.width : 0, H2 = cvL ? cvL.height : 0;
 // ---------- gate checkpoint: "Did you get to Gate X?" (every 3 gates) ----------
 const gateCheckpointTriggered = new Set();
+// Demo mode: keep the video running when passing intermediate gate checkpoints.
+// This avoids pausing at E17/E18/E19 during demo playback, so back-office trajectory keeps streaming.
+const AUTO_GATE_CONTINUE = (() => {
+  try {
+    const sp = new URLSearchParams(location.search);
+    return sp.get("autoGate") === "1";
+  } catch (e) {
+    return false;
+  }
+})();
 let gateToSegmentTime = buildGateToSegmentTimeMap();
 const gateCheckpointOverlay = document.getElementById('gateCheckpointOverlay');
 const gateWhichGateOverlay = document.getElementById('gateWhichGateOverlay');
@@ -950,11 +960,13 @@ function checkGateCheckpoint() {
     const segTime = Number(seg && seg.segmentTime);
     if (!Number.isFinite(segTime)) continue;
     if (t >= segTime - EPS) {
-      vid.pause();
-      setPlayPauseLabel();
       gateCheckpointTriggered.add(i);
-      showGateCheckpointModal(seg.gate, segTime);
-      break;
+      if (!AUTO_GATE_CONTINUE) {
+        vid.pause();
+        setPlayPauseLabel();
+        showGateCheckpointModal(seg.gate, segTime);
+        break;
+      }
     }
   }
 }

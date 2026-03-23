@@ -206,6 +206,12 @@ function buildRouteSiteIframeSrc() {
       "&gateTo=" +
       encodeURIComponent(gateToNav);
   }
+
+  // Demo mode: keep PEK video running through intermediate gate checkpoints.
+  const autoGate = (params.get("autoGate") || "").toString().trim();
+  if (autoGate === "1") {
+    src += "&autoGate=1";
+  }
   return src;
 }
 
