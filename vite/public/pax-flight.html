@@ -552,7 +552,57 @@
 
         setMapMode(mapMode);
       }catch(e){
-        setError('FlightAware 查询失败：\n' + (e?.message || String(e)));
+        // Demo fallback: keep 中转页可用 even when FlightAware is blocked/unavailable.
+        // The QR demo codes always assume hub = PEK.
+        const hub = 'PEK';
+        const terminal = 'T3E';
+
+        function inboundFrom(a){
+          const x = String(a || '').trim().toUpperCase();
+          if (x === 'CA836') return 'CDG';
+          if (x === 'CA921') return 'SYD';
+          if (x === 'CA783') return 'FRA';
+          return '—';
+        }
+
+        function outboundTo(d){
+          const x = String(d || '').trim().toUpperCase();
+          if (x === 'CA783' || x === 'CA837' || x === 'CA903') return 'CDG';
+          return '—';
+        }
+
+        const fromIata = inboundFrom(arrFlight);
+        const toIata = outboundTo(depFlight);
+
+        transfer = {
+          arrival: {
+            flight_iata: String(arrFlight || '').toUpperCase(),
+            dep_iata: fromIata,
+            arr_iata: hub,
+            dep_terminal: '—',
+            arr_terminal: terminal,
+          },
+          departure: {
+            flight_iata: String(depFlight || '').toUpperCase(),
+            dep_iata: hub,
+            arr_iata: toIata,
+            dep_terminal: terminal,
+            arr_terminal: '—',
+          },
+          hub_airport: hub,
+          from_gate: 'E16',
+          to_gate: 'E19',
+          walk_distance_m: 320,
+          walk_time_min: 5,
+          provider: 'Demo',
+        };
+
+        activeLeg = 't1';
+        makeLegButtons([
+          {id:'t1', label:'抵达航班'},
+          {id:'t2', label:'出发航班'},
+        ]);
+        setMapMode(mapMode);
       }
       return;
     }
