@@ -4,8 +4,8 @@
  */
 const ALIAS_TO_CANONICAL: Record<string, string> = {
   DA8X3: "TX1", // Siyao Fu
-  DB5K7: "TX2", // Sophie Chen
-  DC2N9: "TX3", // Yan Jiang
+  DB5K7: "TX3", // Yan Jiang
+  DC2N9: "TX2", // Sophie Chen
 };
 
 /** Empty input → "" (caller supplies default). */
