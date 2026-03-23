@@ -32,6 +32,29 @@ type EntryPayload = {
   [k: string]: any;
 };
 
+function buildPaxFlightSrc(
+  origin: string,
+  tenantId: string,
+  pid: string,
+  plan: "free" | "premium",
+  name: string,
+  intent: "depart" | "arrive" | "transfer",
+  payload: { flight?: string; arr?: string; dep?: string },
+  spawn: ReturnType<typeof parseSpawnFromQuery>
+) {
+  const f = new URL("/pax-flight.html", origin);
+  f.searchParams.set("tenant", tenantId);
+  f.searchParams.set("pid", pid);
+  f.searchParams.set("plan", plan);
+  f.searchParams.set("name", name);
+  f.searchParams.set("intent", intent);
+  if (payload.flight) f.searchParams.set("flight", payload.flight);
+  if (payload.arr) f.searchParams.set("arr", payload.arr);
+  if (payload.dep) f.searchParams.set("dep", payload.dep);
+  appendSpawnParams(f, spawn);
+  return f.pathname + "?" + f.searchParams.toString();
+}
+
 /**
  * Route: /pax?pid=TX1&tenant=airchina (PEK) or tenant=airchina_sfo (SFO)
  * Lounge QR: /pax?pid=TX1&tenant=airchina&lounge=1 → fixed spawn on admin map (see passengerSpawn.ts)
@@ -47,16 +70,57 @@ export default function PaxEntryWrapper() {
   const tenantId = useMemo(() => qs("tenant") || "airchina", []);
 
   const spawn = useMemo(() => parseSpawnFromQuery(qs), []);
+  const incomingName = useMemo(() => (qs("name") || "").trim(), []);
+  const incomingPlanRaw = useMemo(() => (qs("plan") || "").trim().toLowerCase(), []);
+  const incomingPlan = useMemo<"free" | "premium">(
+    () => (incomingPlanRaw === "premium" || incomingPlanRaw === "paid" ? "premium" : "free"),
+    [incomingPlanRaw]
+  );
+  const incomingIntent = useMemo(() => (qs("intent") || "").trim().toLowerCase(), []);
+  const prefillFlight = useMemo(() => (qs("flight") || "").trim(), []);
+  const prefillArr = useMemo(
+    () => (qs("arr") || qs("arrival") || qs("arrivalFlight") || "").trim(),
+    []
+  );
+  const prefillDep = useMemo(
+    () => (qs("dep") || qs("departure") || qs("departureFlight") || "").trim(),
+    []
+  );
 
   /** Quick path: land on pax.html (chat + 视频) without login / 航班页 */
   const skipToPaxHtml = useMemo(
     () => qs("direct") === "1" || qs("skip") === "1" || qs("demo") === "1",
     []
   );
+  /** QR-prefilled path: if flight params exist, skip login and jump to pax-flight results page. */
+  const skipToPaxFlight = useMemo(
+    () => !!prefillFlight || (!!prefillArr && !!prefillDep),
+    [prefillFlight, prefillArr, prefillDep]
+  );
 
   const [iframeSrc, setIframeSrc] = useState<string>(() => {
     if (skipToPaxHtml) {
       return buildPaxHtmlSrc(location.origin, tenantId, pid, spawn);
+    }
+    if (skipToPaxFlight) {
+      const inferredIntent: "depart" | "arrive" | "transfer" =
+        prefillArr && prefillDep
+          ? "transfer"
+          : incomingIntent === "arrive"
+          ? "arrive"
+          : "depart";
+      const plan = incomingPlan;
+      const name = incomingName || (plan === "premium" ? "SIYAO FU" : "Guest");
+      return buildPaxFlightSrc(
+        location.origin,
+        tenantId,
+        pid,
+        plan,
+        name,
+        inferredIntent,
+        { flight: prefillFlight, arr: prefillArr, dep: prefillDep },
+        spawn
+      );
     }
     const u = new URL("/pax-login.html", location.origin);
     u.searchParams.set("pid", pid);
@@ -83,17 +147,18 @@ export default function PaxEntryWrapper() {
       // Step 2: show flight results page first (FlightAware + Apple/OSM maps).
       // After user clicks "开始导航" in pax-flight.html, it will redirect to pax.html (chat).
       if (intent === "depart" || intent === "arrive" || intent === "transfer") {
-        const f = new URL("/pax-flight.html", location.origin);
-        f.searchParams.set("tenant", tenantId);
-        f.searchParams.set("pid", pid);
-        f.searchParams.set("plan", plan);
-        f.searchParams.set("name", name);
-        f.searchParams.set("intent", intent);
-        if (payload.flight) f.searchParams.set("flight", payload.flight);
-        if (payload.arrivalFlight) f.searchParams.set("arr", payload.arrivalFlight);
-        if (payload.departureFlight) f.searchParams.set("dep", payload.departureFlight);
-        appendSpawnParams(f, spawn);
-        setIframeSrc(f.pathname + "?" + f.searchParams.toString());
+        setIframeSrc(
+          buildPaxFlightSrc(
+            location.origin,
+            tenantId,
+            pid,
+            plan,
+            name,
+            intent as "depart" | "arrive" | "transfer",
+            { flight: payload.flight, arr: payload.arrivalFlight, dep: payload.departureFlight },
+            spawn
+          )
+        );
         return;
       }
 
