@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { resolveCanonicalPassengerId } from "../services/passengerAliases";
+import { MOCK_LOUNGE_SPAWN } from "../services/passengerSpawn";
 import { appendSpawnParams, parseSpawnFromQuery } from "../services/passengerSpawn";
 
 function qs(name: string) {
@@ -97,16 +98,23 @@ function buildPaxDialogVideoSrc(
  * Skip straight to pax.html: ?direct=1 or ?skip=1 or ?demo=1
  */
 export default function PaxEntryWrapper() {
+  const hasPixParam = useMemo(() => !!qs("pix"), []);
   const pid = useMemo(() => {
-    const raw = qs("pid") || qs("pax") || "TX1";
+    const raw = qs("pid") || qs("pax") || qs("pix") || "";
     return resolveCanonicalPassengerId(raw) || raw;
   }, []);
   const tenantId = useMemo(() => qs("tenant") || "airchina", []);
 
   // Demo QR passengers: always bypass login and go straight to pax.html (dialog + video).
   const isDemoQrPid = pid === "TX1" || pid === "TX2" || pid === "TX3";
+  const isP11 = pid.toUpperCase() === "P11";
 
-  const spawn = useMemo(() => parseSpawnFromQuery(qs), []);
+  const spawn = useMemo(() => {
+    const parsed = parseSpawnFromQuery(qs);
+    // Legacy printed lounge QR uses `pix=P11` only; pin P11 to lounge by default.
+    if (!parsed && isP11 && hasPixParam) return { ...MOCK_LOUNGE_SPAWN };
+    return parsed;
+  }, [isP11, hasPixParam]);
   const incomingName = useMemo(() => (qs("name") || "").trim(), []);
   const incomingPlanRaw = useMemo(() => (qs("plan") || "").trim().toLowerCase(), []);
   const incomingPlan = useMemo<"free" | "premium">(
@@ -126,16 +134,16 @@ export default function PaxEntryWrapper() {
 
   /** Quick path: land on pax.html (chat + 视频) without login / 航班页 */
   const skipToPaxHtml = useMemo(
-    () => qs("direct") === "1" || qs("skip") === "1" || qs("demo") === "1",
-    []
+    () => !isP11 && (qs("direct") === "1" || qs("skip") === "1" || qs("demo") === "1"),
+    [isP11]
   );
   /**
    * QR-prefilled demo path: QR already includes routing data.
    * We skip login and go directly to pax.html (dialog + video).
    */
   const skipToPaxDialogAndVideo = useMemo(
-    () => isDemoQrPid,
-    [isDemoQrPid]
+    () => !isP11 && isDemoQrPid,
+    [isDemoQrPid, isP11]
   );
 
   const [iframeSrc, setIframeSrc] = useState<string>(() => {

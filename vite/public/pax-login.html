@@ -485,6 +485,22 @@
   </div>
 
   <script>
+    function resolveCanonicalPassengerId(raw) {
+      const s = (raw || "").trim();
+      if (!s) return "";
+      const m = { DA8X3: "TX1", DB5K7: "TX3", DC2N9: "TX2" };
+      return m[s.toUpperCase()] || s;
+    }
+    const __entryParams = new URLSearchParams(location.search);
+    const __entryRawPid = __entryParams.get('pid') || __entryParams.get('pax') || '';
+    const __entryPid = resolveCanonicalPassengerId(__entryRawPid) || __entryRawPid;
+    const __isP11LoungeFlow =
+      String(__entryPid || '').toUpperCase() === 'P11' &&
+      (
+        __entryParams.get('lounge') === '1' ||
+        (__entryParams.get('spawnLat') && __entryParams.get('spawnLng'))
+      );
+
     // ---------------- Mode switch ----------------
     const tabFree = document.getElementById('tab-free');
     const tabLogin = document.getElementById('tab-login');
@@ -719,6 +735,16 @@
       loginStep2.style.display = 'none';
       welcome.classList.add('show');
       loginAfter.style.display = 'block';
+      if (__isP11LoungeFlow) {
+        const transferBtn = document.querySelector('#choices-paid .choice[data-type="transfer"]');
+        if (transferBtn) transferBtn.click();
+        const arrInput = document.getElementById('paid-arr');
+        const depInput = document.getElementById('paid-dep');
+        if (arrInput && !arrInput.value) arrInput.value = 'CA902';
+        if (depInput && !depInput.value) depInput.value = 'CA781';
+        arrInput?.dispatchEvent(new Event('input', { bubbles: true }));
+        depInput?.dispatchEvent(new Event('input', { bubbles: true }));
+      }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
@@ -780,7 +806,7 @@
     });
 
     // Start
-    setMode('free');
+    setMode(__isP11LoungeFlow ? 'login' : 'free');
   </script>
 </body>
 </html>
