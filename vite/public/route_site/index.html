@@ -669,6 +669,19 @@ function orientaApplyPekGateClipFromQuery_(rows) {
     if (fv === '1' || fv === 'true' || fv === 'yes') return null;
     var fromG = orientaNormalizeGate_(sp.get('from') || sp.get('origin') || sp.get('gateFrom') || '');
     var toG = orientaNormalizeGate_(sp.get('to') || sp.get('dest') || sp.get('destination') || sp.get('gateTo') || '');
+    var rawPax = String(sp.get('pax') || sp.get('pid') || sp.get('pix') || '').trim();
+    var paxAlias = { DA8X3: "TX1", DB5K7: "TX3", DC2N9: "TX2" };
+    var pax = paxAlias[(rawPax || '').toUpperCase()] || rawPax;
+    var demoGateByPax = {
+      TX1: { from: 'E16', to: 'E19' },
+      TX2: { from: 'E18', to: 'E19' },
+      TX3: { from: 'E17', to: 'E19' }
+    };
+    var demoPair = demoGateByPax[pax];
+    if (demoPair) {
+      fromG = orientaNormalizeGate_(demoPair.from);
+      toG = orientaNormalizeGate_(demoPair.to);
+    }
     var iFrom, iTo;
     if (!fromG || !toG) {
       iFrom = 0;
@@ -842,11 +855,11 @@ const POPUP_TEXT = '#A855F7';
 const POPUP_MARGIN = 16, PADX = 16, PADY = 12, LIFE = 3000, FADE = 350, STACK = 3;
 /** Same-origin /api on the Vite admin server (e.g. :5174); override with ?sensorBackend=http://host:port */
 var ROUTE_SITE_TENANT_ID = "airchina";
-var ROUTE_SITE_PASSENGER_ID = "TX1";
+var ROUTE_SITE_PASSENGER_ID = "";
 try {
   var __osp = new URLSearchParams(location.search);
   ROUTE_SITE_TENANT_ID = (__osp.get("tenant") || "airchina").trim() || "airchina";
-  var __rawPax = (__osp.get("pax") || __osp.get("pid") || "TX1").trim() || "TX1";
+  var __rawPax = (__osp.get("pax") || __osp.get("pid") || __osp.get("pix") || "").trim();
   var __paxAlias = { DA8X3: "TX1", DB5K7: "TX3", DC2N9: "TX2" };
   ROUTE_SITE_PASSENGER_ID = __paxAlias[__rawPax.toUpperCase()] || __rawPax;
 } catch (e) {}
@@ -2007,13 +2020,28 @@ function armGateGuards(){
 }
 
 // (Re)compute when metadata or duration stabilizes
+let __orientaClipStartApplied = false;
+function orientaApplyInitialClipStart_() {
+  if (__orientaClipStartApplied) return;
+  if (typeof __pekClip === 'undefined' || !__pekClip || !vid) return;
+  const t0 = Number(__pekClip.t0);
+  if (!Number.isFinite(t0) || t0 <= 0) return;
+  const canSeek = (Number.isFinite(vid.duration) && vid.duration > 0) || vid.readyState >= 1;
+  if (!canSeek) return;
+  try {
+    // Some browsers ignore an immediate seek until metadata is ready; keep retry hooks below.
+    vid.currentTime = t0;
+    __orientaClipStartApplied = true;
+  } catch (e) {}
+}
 vid.addEventListener('loadedmetadata', () => {
-  if (typeof __pekClip !== 'undefined' && __pekClip) {
-    try { vid.currentTime = __pekClip.t0; } catch (e) {}
-  }
+  orientaApplyInitialClipStart_();
   computeStopAt(); armGateGuards();
 });
+vid.addEventListener('canplay', orientaApplyInitialClipStart_);
 vid.addEventListener('durationchange',  () => { computeStopAt(); armGateGuards(); });
+// If metadata loaded before listeners were attached, apply immediately.
+setTimeout(orientaApplyInitialClipStart_, 0);
 
 // If the device still skips to the end, bring it back to the gate and pause
 vid.addEventListener('ended', () => {

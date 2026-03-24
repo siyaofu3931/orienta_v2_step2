@@ -339,47 +339,7 @@ function Dashboard({ session, onLogout }: { session: AdminSession; onLogout(): v
       return computed;
     });
 
-    // Always show Yan Jiang (TX3) first: remove any duplicate, then prepend one
-    const withoutTX3 = list.filter((p: PassengerComputed) => p.id !== "TX3");
-    const firstGate = gatesById.size > 0 ? Array.from(gatesById.values())[0] : null;
-    const firstFlight = flightsById.size > 0 ? Array.from(flightsById.values())[0] : null;
-    const gateId = firstGate?.id ?? "E22";
-    const flightId = firstFlight?.id ?? "CA781";
-    const loc = firstGate?.coordinate ?? { lat: 40.0742, lng: 116.6065 };
-    const yanJiang: PassengerComputed = (() => {
-      const fallbackP = {
-        id: "TX3",
-        name: "Yan Jiang",
-        nationality: "CN",
-        locale: "zh-CN",
-        needsWheelchair: false,
-        plan: "premium" as const,
-        transfer: {
-          direction: "intl_to_intl",
-          urgency: "urgent",
-          inboundFlight: "CA856",
-          inboundFrom: "FRA",
-          inboundArr: new Date(Date.now() - 70 * 60 * 1000).toISOString(),
-          outboundFlight: flightId,
-          outboundTo: "CDG",
-          outboundDep: new Date(Date.now() + 25 * 60 * 1000).toISOString(),
-          note: "At risk - Final Call flight, still dining",
-        },
-        flightId,
-        gateId,
-        activity: "dining" as const,
-        location: loc,
-        extStatus: "red" as PaxExtStatus,
-        path: undefined,
-        pathIndex: undefined,
-        lastUpdateMs: Date.now(),
-      };
-      const gate = gatesById.get(gateId) || firstGate;
-      const flight = flightsById.get(flightId) || firstFlight;
-      const c = computePassenger(fallbackP as any, flight, gate);
-      return { ...c, extStatus: "red" as PaxExtStatus };
-    })();
-    return [yanJiang, ...withoutTX3];
+    return list;
   }, [passengersRaw, gatesById, flightsById, presence, paxTrajectories]);
 
   const hoverPax = useMemo(() =>
