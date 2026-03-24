@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import type { Gate, PassengerComputed, LatLng } from "../../services/types";
 import { T3E_SPINE_CENTER } from "../../services/passengerSim";
-import { ROUTE_E15_TO_E19 } from "../../data/routeE15toE19";
 import LeafletAdapter from "./leafletAdapter";
 import MapKitAdapter from "./mapkitAdapter";
 
@@ -66,10 +65,7 @@ export default function MapView(props: {
       color: statusColor(p),
     })), [passengers]);
 
-  const staticRoutes = useMemo(() => {
-    if (props.airport !== "PEK") return [];
-    return [{ id: "e15-e19", points: ROUTE_E15_TO_E19, color: "#0a84ff" }];
-  }, [props.airport]);
+  const staticRoutes = useMemo(() => [], []);
 
   const payload = useMemo(() => ({
     center,

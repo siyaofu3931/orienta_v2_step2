@@ -646,7 +646,14 @@
   });
 
   function gatesForRouteVideo(){
+    const demoGateByPid = {
+      TX1: { fromGate: 'E16', toGate: 'E19' },
+      TX2: { fromGate: 'E18', toGate: 'E19' },
+      TX3: { fromGate: 'E17', toGate: 'E19' },
+    };
+    const demoPair = demoGateByPid[String(pid || '').toUpperCase()];
     if (intent === 'transfer'){
+      if (demoPair) return demoPair;
       return { fromGate: 'E16', toGate: 'E19' };
     }
     if (single && single.instance){

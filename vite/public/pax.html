@@ -160,7 +160,8 @@ function resolveCanonicalPassengerId(raw) {
 const params = new URLSearchParams(location.search);
 const tenantId   = params.get("tenant") || "airchina";
 const passengerId =
-  resolveCanonicalPassengerId(params.get("pax") || params.get("pid") || "TX1") || "TX1";
+  resolveCanonicalPassengerId(params.get("pax") || params.get("pid") || params.get("pix") || "") ||
+  (params.get("pax") || params.get("pid") || params.get("pix") || "");
 const __isP11 = String(passengerId || "").toUpperCase() === "P11";
 const __cameFromFlight = params.get("fromFlight") === "1";
 const hubFromQuery = (params.get("hub") || params.get("airport") || "").trim().toUpperCase();
@@ -199,11 +200,19 @@ if (__isP11 && !__cameFromFlight) {
 
 const gateFromNav = (params.get("gateFrom") || "").trim();
 const gateToNav = (params.get("gateTo") || "").trim();
+const demoGateByPassenger = {
+  TX1: { from: "E16", to: "E19" },
+  TX2: { from: "E18", to: "E19" },
+  TX3: { from: "E17", to: "E19" },
+};
+const demoPair = demoGateByPassenger[String(passengerId || "").toUpperCase()];
+const effectiveGateFrom = demoPair ? demoPair.from : gateFromNav;
+const effectiveGateTo = demoPair ? demoPair.to : gateToNav;
 (function initRouteVideoLine() {
   const el = document.getElementById("routeVideoLine");
   if (!el) return;
-  if (gateFromNav && gateToNav) {
-    el.textContent = "抵达登机口 " + gateFromNav + " → 出发登机口 " + gateToNav;
+  if (effectiveGateFrom && effectiveGateTo) {
+    el.textContent = "抵达登机口 " + effectiveGateFrom + " → 出发登机口 " + effectiveGateTo;
     el.style.display = "block";
   }
 })();
@@ -216,12 +225,12 @@ function buildRouteSiteIframeSrc() {
     encodeURIComponent(tenantId) +
     "&pax=" +
     encodeURIComponent(passengerId);
-  if (gateFromNav && gateToNav) {
+  if (effectiveGateFrom && effectiveGateTo) {
     src +=
       "&gateFrom=" +
-      encodeURIComponent(gateFromNav) +
+      encodeURIComponent(effectiveGateFrom) +
       "&gateTo=" +
-      encodeURIComponent(gateToNav);
+      encodeURIComponent(effectiveGateTo);
   }
 
   // Demo mode: keep PEK video running through intermediate gate checkpoints.
