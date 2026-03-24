@@ -161,6 +161,8 @@ const params = new URLSearchParams(location.search);
 const tenantId   = params.get("tenant") || "airchina";
 const passengerId =
   resolveCanonicalPassengerId(params.get("pax") || params.get("pid") || "TX1") || "TX1";
+const __isP11 = String(passengerId || "").toUpperCase() === "P11";
+const __cameFromFlight = params.get("fromFlight") === "1";
 const hubFromQuery = (params.get("hub") || params.get("airport") || "").trim().toUpperCase();
 /** 与 pax-flight 抵达/出发机场一致：默认国航租户走 PEK 室内资源 */
 const routeSiteAirport = hubFromQuery || (tenantId === "airchina" ? "PEK" : "SFO");
@@ -179,6 +181,21 @@ function parseSpawnPoint() {
   return null;
 }
 const spawnPoint = parseSpawnPoint();
+
+// P11 lounge policy: require login + transfer before reaching pax.html.
+// If someone opens pax.html directly for P11 (QR/deep link), bounce to /pax entry.
+if (__isP11 && !__cameFromFlight) {
+  const back = new URL("/pax", location.origin);
+  back.searchParams.set("tenant", tenantId);
+  back.searchParams.set("pid", "P11");
+  if (spawnPoint) {
+    back.searchParams.set("spawnLat", String(spawnPoint.lat));
+    back.searchParams.set("spawnLng", String(spawnPoint.lng));
+  } else if (params.get("lounge") === "1" || params.get("spawn") === "lounge") {
+    back.searchParams.set("lounge", "1");
+  }
+  location.replace(back.pathname + "?" + back.searchParams.toString());
+}
 
 const gateFromNav = (params.get("gateFrom") || "").trim();
 const gateToNav = (params.get("gateTo") || "").trim();

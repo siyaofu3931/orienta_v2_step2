@@ -668,6 +668,10 @@
       u.searchParams.set('arr', arrFlight);
       u.searchParams.set('dep', depFlight);
     }
+    if (String(pid || '').toUpperCase() === 'P11') {
+      // P11 lounge flow: allow direct pax.html only after passing pax-flight.
+      u.searchParams.set('fromFlight', '1');
+    }
     if (spawn) {
       u.searchParams.set('spawnLat', String(spawn.lat));
       u.searchParams.set('spawnLng', String(spawn.lng));
