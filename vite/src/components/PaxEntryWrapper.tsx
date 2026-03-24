@@ -134,8 +134,8 @@ export default function PaxEntryWrapper() {
    * We skip login and go directly to pax.html (dialog + video).
    */
   const skipToPaxDialogAndVideo = useMemo(
-    () => isDemoQrPid || !!prefillFlight || (!!prefillArr && !!prefillDep),
-    [isDemoQrPid, prefillFlight, prefillArr, prefillDep]
+    () => isDemoQrPid,
+    [isDemoQrPid]
   );
 
   const [iframeSrc, setIframeSrc] = useState<string>(() => {
