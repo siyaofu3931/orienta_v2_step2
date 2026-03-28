@@ -36,6 +36,14 @@ export default defineConfig(({ mode }) => {
       host: true,
       strictPort: true,
       allowedHosts: [".trycloudflare.com"],
+      /** Dev: `route_site?pdrBackend=local` → PDR_AIRCHINA `python run.py` (default port 10000, or set PORT) */
+      proxy: {
+        "/pdr-api": {
+          target: `http://127.0.0.1:${process.env.PDR_API_PORT || "10000"}`,
+          changeOrigin: true,
+          rewrite: (p) => p.replace(/^\/pdr-api/, ""),
+        },
+      },
     },
   };
 });

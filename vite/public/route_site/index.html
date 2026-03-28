@@ -485,6 +485,20 @@
     flex-wrap:wrap;
   }
   .gate-checkpoint-modal .btn{ min-width:100px; }
+  .btn-imu-pdr{
+    flex-shrink:0;
+    height:34px;
+    padding:0 10px;
+    border-radius:10px;
+    border:1px solid rgba(0,200,83,0.45);
+    background:rgba(0,200,83,0.18);
+    color:#b8f5c8;
+    font-size:12px;
+    font-weight:700;
+    white-space:nowrap;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .btn-imu-pdr:active{ opacity:0.88; transform:translateY(1px); }
   .gate-input{
     width:100%;
     max-width:200px;
@@ -522,6 +536,7 @@
               <option value="2">2.0x</option>
             </select>
             <input class="timeline yt-progress" id="timeline" type="range" min="0" max="1000" value="0" step="1"/>
+            <button type="button" class="btn-imu-pdr" id="btnImuPdr" style="display:none" title="使用 IMU/陀螺仪/磁力计实时轨迹（需 PDR 后端）">IMU 定位</button>
           </div>
         </section>
         <div class="amenities-video-overlay" id="amenitiesVideoOverlay">
@@ -579,6 +594,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/ol@v8.2.0/dist/ol.js"></script>
+<script src="pdr-sensor-bridge.js"></script>
 <script>
 (function(){
   var sp = new URLSearchParams(location.search);
@@ -842,6 +858,53 @@ function orientaMapSplitFromPathProgress_(path, rawRatio, dotStart, dotEnd) {
   return { coord: coord, pastCoords: pastCoords, futureCoords: futureCoords, si: si, tt: tt, b: b, n: n };
 }
 
+/** Live trajectory on map: relay from another tab/device, or local IMU+PDR backend. */
+var orientaLivePdrUntilMs_ = 0;
+var orientaLivePdrPathLonLat_ = null;
+var orientaLivePdrCoord_ = null;
+var orientaSensorPdrRecording_ = false;
+var orientaSensorPdrCoord_ = null;
+var orientaSensorPdrTrail_ = null;
+var orientaLastImuPushMs_ = 0;
+var orientaPdrInstance_ = null;
+function orientaLivePdrActive_() {
+  return orientaLivePdrUntilMs_ > Date.now();
+}
+function orientaSensorPdrActive_() {
+  return orientaSensorPdrRecording_ && orientaSensorPdrCoord_ != null;
+}
+function orientaNearestVertexOnPathLonLat_(path, lng, lat) {
+  if (!path || path.length < 1) return 0;
+  var bestI = 0, bestD = Infinity;
+  for (var i = 0; i < path.length; i++) {
+    var dx = path[i][0] - lng, dy = path[i][1] - lat;
+    var d = dx * dx + dy * dy;
+    if (d < bestD) { bestD = d; bestI = i; }
+  }
+  return bestI;
+}
+function orientaBuildMapSplitFromTrailAndCoord_(coordLngLat, trailLngLat) {
+  if (!coordLngLat || coordLngLat.length < 2) return null;
+  var lng = coordLngLat[0], lat = coordLngLat[1];
+  var trail = trailLngLat;
+  if (!trail || !trail.length) trail = [coordLngLat];
+  var pastCoords = trail.slice();
+  if (pastCoords.length < 2) pastCoords = [coordLngLat, coordLngLat];
+  var futureCoords = [];
+  if (PATH_LONLAT && PATH_LONLAT.length >= 2) {
+    var ni = orientaNearestVertexOnPathLonLat_(PATH_LONLAT, lng, lat);
+    futureCoords = PATH_LONLAT.slice(ni);
+  }
+  var b = futureCoords.length >= 2 ? futureCoords[1] : (PATH_LONLAT && PATH_LONLAT.length >= 2 ? PATH_LONLAT[1] : coordLngLat);
+  return { coord: coordLngLat, pastCoords: pastCoords, futureCoords: futureCoords, si: 0, tt: 0, b: b, n: PATH_LONLAT ? PATH_LONLAT.length : 0 };
+}
+function orientaBuildMapSplitFromLivePdr_() {
+  return orientaBuildMapSplitFromTrailAndCoord_(orientaLivePdrCoord_, orientaLivePdrPathLonLat_);
+}
+function orientaBuildMapSplitFromSensorPdr_() {
+  return orientaBuildMapSplitFromTrailAndCoord_(orientaSensorPdrCoord_, orientaSensorPdrTrail_);
+}
+
 // segment window [security → gate]
 const START_S = 0.000;
 const STOP_S  = 2191.131;
@@ -868,6 +931,19 @@ try {
   var __sb = new URLSearchParams(location.search).get("sensorBackend");
   if (__sb && String(__sb).trim()) SENSOR_BACKEND_URL = String(__sb).trim().replace(/\/$/, "");
 } catch (e) {}
+/** PDR_AIRCHINA FastAPI base (no trailing slash). Dev: ?pdrBackend=local → same-origin /pdr-api (Vite proxy → :8000) */
+var ORIENTA_PDR_BACKEND = "";
+var ORIENTA_PDR_MAP_MATCH = false;
+try {
+  var __pdrQ = new URLSearchParams(location.search);
+  var __pdrB = __pdrQ.get("pdrBackend");
+  if (__pdrB === "1" || __pdrB === "local") {
+    ORIENTA_PDR_BACKEND = window.location.origin.replace(/\/+$/, "") + "/pdr-api";
+  } else if (__pdrB && String(__pdrB).trim()) {
+    ORIENTA_PDR_BACKEND = String(__pdrB).trim().replace(/\/+$/, "");
+  }
+  ORIENTA_PDR_MAP_MATCH = __pdrQ.get("pdrMapMatch") === "1";
+} catch (e2) {}
 /** Opaque id for logs / future session store; back office keys off tenant_id + passenger_id */
 var SENSOR_SESSION_ID = ROUTE_SITE_TENANT_ID + "_" + ROUTE_SITE_PASSENGER_ID;
 const MAPKIT_EMBED_TOKEN = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlE5OTU4ODlWNEgifQ.eyJvcmlnaW4iOiJodHRwOi8vMTkyLjE2OC4wLjIzOjUxNzMiLCJpc3MiOiJTVTVYWTlBOUdGIiwiaWF0IjoxNzcyMzAzNjU4LCJleHAiOjE3NzIzOTAwNTh9.nzZ2QTo2UA_Ew3ogxsxeEtftozYzzp0EJ4cz2NOt0IKRHqw4nDj0Nk8Fw7ma_A21mWN2NmXCg9z9V251_Ezs0Q";
@@ -1067,8 +1143,51 @@ function getCurrentTouristPosition() {
   if (!ms || !ms.coord) return null;
   return { path_fraction: pathRatio, lat: ms.coord[1], lng: ms.coord[0] };
 }
+function pushSensorPdrToBackendThrottled_(minMs) {
+  var gap = minMs != null ? minMs : 450;
+  var now = Date.now();
+  if (now - orientaLastImuPushMs_ < gap) return;
+  orientaLastImuPushMs_ = now;
+  if (!orientaSensorPdrCoord_) return;
+  var lat = orientaSensorPdrCoord_[1], lng = orientaSensorPdrCoord_[0];
+  var pathPayload = [];
+  if (orientaSensorPdrTrail_ && orientaSensorPdrTrail_.length) {
+    pathPayload = orientaSensorPdrTrail_.map(function (c) { return { lat: c[1], lng: c[0] }; });
+  } else {
+    pathPayload = [{ lat: lat, lng: lng }];
+  }
+  var base = SENSOR_BACKEND_URL || "";
+  try {
+    fetch(base + "/api/tourist-position", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        session_id: SENSOR_SESSION_ID,
+        tenant_id: ROUTE_SITE_TENANT_ID,
+        passenger_id: ROUTE_SITE_PASSENGER_ID,
+        path_fraction: 0,
+        lat: lat,
+        lng: lng,
+        path: pathPayload,
+      }),
+    }).catch(function () {});
+  } catch (e) {}
+  try {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage(
+        { type: "orienta-pax-trajectory", position: { lat: lat, lng: lng }, path: pathPayload },
+        window.location.origin
+      );
+    }
+  } catch (e2) {}
+}
 function pushTouristPositionToBackend() {
   if (!ROUTE_SITE_PASSENGER_ID) return;
+  if (orientaSensorPdrActive_()) {
+    pushSensorPdrToBackendThrottled_();
+    return;
+  }
+  if (orientaLivePdrActive_()) return;
   const pos = getCurrentTouristPosition();
   if (!pos) return;
   var pathPayload = null;
@@ -1140,6 +1259,25 @@ window.addEventListener("message", function (e) {
   if (d && d.type === "orienta-push-tourist") {
     orientaLastTouristPushMs_ = 0;
     pushTouristPositionToBackend();
+  }
+  if (d && d.type === "orienta-live-pdr-trajectory" && d.position &&
+      typeof d.position.lat === "number" && typeof d.position.lng === "number") {
+    var lat = d.position.lat, lng = d.position.lng;
+    orientaLivePdrCoord_ = [lng, lat];
+    orientaLivePdrPathLonLat_ = [];
+    var arr = Array.isArray(d.path) ? d.path : [];
+    for (var i = 0; i < arr.length; i++) {
+      var p = arr[i];
+      if (p && typeof p.lat === "number" && typeof p.lng === "number")
+        orientaLivePdrPathLonLat_.push([p.lng, p.lat]);
+    }
+    orientaLivePdrUntilMs_ = Date.now() + 12000;
+    return;
+  }
+  if (d && d.type === "orienta-live-pdr-clear") {
+    orientaLivePdrUntilMs_ = 0;
+    orientaLivePdrPathLonLat_ = null;
+    orientaLivePdrCoord_ = null;
   }
 });
 
@@ -2233,6 +2371,13 @@ function drawPeoplePage(){
   var mapSplit = (PATH_LONLAT && PATH_LONLAT.length >= 2)
     ? orientaMapSplitFromPathProgress_(PATH_LONLAT, rawRatio, DOT_START_OFFSET, DOT_END_OFFSET)
     : null;
+  if (orientaSensorPdrActive_()) {
+    var imuSplit = orientaBuildMapSplitFromSensorPdr_();
+    if (imuSplit) mapSplit = imuSplit;
+  } else if (orientaLivePdrActive_()) {
+    var extSplit = orientaBuildMapSplitFromLivePdr_();
+    if (extSplit) mapSplit = extSplit;
+  }
 
   if (ctxP) {
     ctxP.setTransform(1,0,0,1,0,0);
@@ -2368,6 +2513,55 @@ function drawPeoplePage(){
     `(From ${FROM_LABEL} to ${TARGET_LABEL})`;
 }
 
+
+function orientaInitImuPdrUi_() {
+  var btn = document.getElementById("btnImuPdr");
+  if (!btn || typeof OrientaRouteSitePdr === "undefined") return;
+  if (!ORIENTA_PDR_BACKEND) return;
+  btn.style.display = "";
+  function setLabel(running) {
+    btn.textContent = running ? "停止 IMU" : "IMU 定位";
+  }
+  setLabel(false);
+  btn.addEventListener("click", function () {
+    if (orientaPdrInstance_ && orientaPdrInstance_.recording) {
+      orientaPdrInstance_.stop();
+      orientaSensorPdrRecording_ = false;
+      orientaSensorPdrCoord_ = null;
+      orientaSensorPdrTrail_ = null;
+      setLabel(false);
+      return;
+    }
+    if (!orientaPdrInstance_) {
+      orientaPdrInstance_ = new OrientaRouteSitePdr({
+        getBackendBase: function () {
+          return ORIENTA_PDR_BACKEND;
+        },
+        getMapOrigin: function () {
+          if (PATH_LONLAT && PATH_LONLAT.length && PATH_LONLAT[0].length >= 2) {
+            return { lat: PATH_LONLAT[0][1], lng: PATH_LONLAT[0][0] };
+          }
+          return { lat: 40.077, lng: 116.606 };
+        },
+        mapMatchEnabled: ORIENTA_PDR_MAP_MATCH,
+        onStatus: function (msg) {
+          btn.title = msg || "IMU + PDR_AIRCHINA 后端";
+        },
+        onTrajectory: function (d) {
+          orientaSensorPdrRecording_ = true;
+          orientaSensorPdrCoord_ = [d.position.lng, d.position.lat];
+          orientaSensorPdrTrail_ = (d.path || []).map(function (p) {
+            return [p.lng, p.lat];
+          });
+        },
+      });
+    }
+    orientaPdrInstance_.start().then(function (ok) {
+      if (ok) setLabel(true);
+    });
+  });
+}
+orientaInitImuPdrUi_();
 
 function drawLuggagePage(){
   ctxL.setTransform(1,0,0,1,0,0);

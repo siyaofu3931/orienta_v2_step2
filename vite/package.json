@@ -8,7 +8,8 @@
     "build": "node node_modules/vite/bin/vite.js build",
     "preview": "node node_modules/vite/bin/vite.js preview",
     "start": "tsx server.ts",
-    "serve": "npm run build && npm run start"
+    "serve": "npm run build && npm run start",
+    "pdr-api": "cd ../pdr-backend && python3 run.py"
   },
   "dependencies": {
     "jose": "^5.9.6",

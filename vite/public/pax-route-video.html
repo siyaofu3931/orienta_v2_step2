@@ -85,6 +85,13 @@
             "&to=" +
             encodeURIComponent(toGateRaw);
         }
+        const pdrB = (sp.get("pdrBackend") || "").toString().trim();
+        if (pdrB) {
+          frameSrc += "&pdrBackend=" + encodeURIComponent(pdrB);
+        }
+        if (sp.get("pdrMapMatch") === "1") {
+          frameSrc += "&pdrMapMatch=1";
+        }
         frame.src = frameSrc;
       }
       const hint = document.getElementById("routeHint");
@@ -111,6 +118,61 @@
         }
         history.back();
       });
+
+      // Live PDR (PDR_AIRCHINA on phone, same pax id) → map inside route_site iframe
+      var __paxAliasRv = { DA8X3: "TX1", DB5K7: "TX3", DC2N9: "TX2" };
+      var __canonicalPaxRv = __paxAliasRv[String(paxQ || "").toUpperCase()] || paxQ;
+      var __pdrWsRv = null;
+      function __connectPdrRelayWsRv() {
+        if (!__canonicalPaxRv) return;
+        var proto = location.protocol === "https:" ? "wss" : "ws";
+        var url = proto + "://" + location.host + "/ws";
+        try {
+          __pdrWsRv = new WebSocket(url);
+        } catch (e) {
+          return;
+        }
+        __pdrWsRv.onopen = function () {
+          __pdrWsRv.send(
+            JSON.stringify({
+              type: "hello",
+              role: "pax",
+              tenantId: tenantQ,
+              passengerId: __canonicalPaxRv,
+            })
+          );
+        };
+        __pdrWsRv.onmessage = function (ev) {
+          var m = null;
+          try {
+            m = JSON.parse(ev.data);
+          } catch (e) {
+            return;
+          }
+          if (!m || m.passengerId !== __canonicalPaxRv) return;
+          var frame = document.getElementById("routeFrame");
+          if (!frame || !frame.contentWindow) return;
+          if (m.type === "pax_trajectory" && m.position) {
+            try {
+              frame.contentWindow.postMessage(
+                { type: "orienta-live-pdr-trajectory", path: m.path, position: m.position },
+                location.origin
+              );
+            } catch (e2) {}
+          }
+          if (m.type === "pax_trajectory_clear") {
+            try {
+              frame.contentWindow.postMessage({ type: "orienta-live-pdr-clear" }, location.origin);
+            } catch (e3) {}
+          }
+        };
+        __pdrWsRv.onclose = function () {
+          __pdrWsRv = null;
+          setTimeout(__connectPdrRelayWsRv, 1500);
+        };
+        __pdrWsRv.onerror = function () {};
+      }
+      __connectPdrRelayWsRv();
     })();
   </script>
 </body>

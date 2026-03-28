@@ -117,7 +117,8 @@ export function attachWsHub(server: ViteDevServer | HttpServer) {
     tid: string,
     rawPassengerId: string,
     pathRaw: any[],
-    position: { lat: number; lng: number } | null
+    position: { lat: number; lng: number } | null,
+    opts?: { exceptWs?: WebSocket }
   ): boolean {
     const pid = resolveCanonicalPassengerId(String(rawPassengerId ?? ""));
     if (!pid || !tid) return false;
@@ -132,7 +133,9 @@ export function attachWsHub(server: ViteDevServer | HttpServer) {
     if (!pos) return false;
     const data = { path: path.length > 0 ? path : [pos], position: pos };
     paxTrajectories.set(key, data);
-    broadcastAdmins(tid, { type: "pax_trajectory", tenantId: tid, passengerId: pid, path: data.path, position: data.position });
+    const out = { type: "pax_trajectory", tenantId: tid, passengerId: pid, path: data.path, position: data.position };
+    broadcastAdmins(tid, out);
+    broadcastPaxExcept(tid, pid, out, opts?.exceptWs);
     return true;
   }
 
@@ -141,7 +144,9 @@ export function attachWsHub(server: ViteDevServer | HttpServer) {
     if (!pid || !tid) return false;
     const key = `${tid}::${pid}`;
     if (!paxTrajectories.delete(key)) return false;
-    broadcastAdmins(tid, { type: "pax_trajectory_clear", tenantId: tid, passengerId: pid });
+    const out = { type: "pax_trajectory_clear", tenantId: tid, passengerId: pid };
+    broadcastAdmins(tid, out);
+    broadcastPax(tid, pid, out);
     return true;
   }
 
@@ -175,6 +180,17 @@ export function attachWsHub(server: ViteDevServer | HttpServer) {
     const set = paxSockets.get(key);
     if (!set) return;
     for (const ws of set) wsSend(ws, msg);
+  }
+
+  /** Fan-out to other tabs/devices for the same passenger (e.g. PDR phone → video page iframe). */
+  function broadcastPaxExcept(tenantId: string, passengerId: string, msg: any, exceptWs?: WebSocket) {
+    const key = `${tenantId}::${passengerId}`;
+    const set = paxSockets.get(key);
+    if (!set) return;
+    for (const w of set) {
+      if (exceptWs && w === exceptWs) continue;
+      wsSend(w, msg);
+    }
   }
 
   function setPresence(tenantId: string, passengerId: string, isOnline: boolean) {
@@ -466,7 +482,7 @@ export function attachWsHub(server: ViteDevServer | HttpServer) {
         const path = Array.isArray(msg.path) ? msg.path : [];
         const pos = msg.position && typeof msg.position.lat === "number" && typeof msg.position.lng === "number"
           ? { lat: msg.position.lat, lng: msg.position.lng } : null;
-        storeAndBroadcastTrajectory(tenantId, passengerId, path, pos);
+        storeAndBroadcastTrajectory(tenantId, passengerId, path, pos, { exceptWs: ws });
         return;
       }
 
