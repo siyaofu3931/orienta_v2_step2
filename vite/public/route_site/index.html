@@ -397,6 +397,15 @@
     align-items:center;
     justify-content:center;
   }
+  /* PDR: cyan = WebSocket OK; green = devicemotion events received */
+  #btnPdrImu.orienta-pdr-connected{
+    border-color: rgba(34, 211, 238, 0.55);
+    box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.25);
+  }
+  #btnPdrImu.orienta-pdr-imu-live{
+    background: rgba(0, 200, 83, 0.22);
+    border-color: var(--brand);
+  }
   .yt-time{
     font-size:12px;
     color:#ececec;
@@ -522,8 +531,8 @@
               <option value="2">2.0x</option>
             </select>
             <input class="timeline yt-progress" id="timeline" type="range" min="0" max="1000" value="0" step="1"/>
-            <button type="button" class="yt-icon-btn" id="btnPdrImu" title="使用手机 IMU 显示室内轨迹（需 HTTPS）">PDR</button>
-            <span class="yt-time" id="pdrImuStatus" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+            <button type="button" class="yt-icon-btn" id="btnPdrImu" title="PDR：需 HTTPS；URL 加 ?pdrOriginLat=&amp;pdrOriginLng= 登机口起点">PDR</button>
+            <span class="yt-time" id="pdrImuStatus" style="max-width:min(52vw,220px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left"></span>
           </div>
         </section>
         <div class="amenities-video-overlay" id="amenitiesVideoOverlay">
