@@ -1,8 +1,12 @@
 node_modules/
 dist/
+__pycache__/
+*.pyc
 .env
 .env.local
 *.log
 .DS_Store
 
-# PEK video is tracked with Git LFS (see .gitattributes). Install: git lfs install
+# PEK indoor video (~325 MB) — not in git; Render uses PEK_VIDEO_URL in scripts/render-build.sh
+vite/public/route_site/pek_videoroute_E.MP4
+vite/public/route_site/pek_videoroute_E.mp4

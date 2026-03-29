@@ -238,6 +238,13 @@ function buildRouteSiteIframeSrc() {
   if (autoGate === "1") {
     src += "&autoGate=1";
   }
+  const pdrB = (params.get("pdrBackend") || "").toString().trim();
+  if (pdrB) {
+    src += "&pdrBackend=" + encodeURIComponent(pdrB);
+  }
+  if (params.get("pdrMapMatch") === "1") {
+    src += "&pdrMapMatch=1";
+  }
   return src;
 }
 
@@ -374,6 +381,26 @@ function connect() {
     if (m.type === "chat_history") { clearMsgs(); m.messages.forEach(msg => handleChatMsg(msg, false)); }
     if (m.type === "message")      showNotify(m.record.body, m.record.messageId);
     if (m.type === "loc_request")  showLocRequest();
+    // PDR phone (or second tab) → same passengerId: drive video-page map from live trajectory
+    if (m.type === "pax_trajectory" && m.passengerId === passengerId && m.position) {
+      const iframe = document.getElementById("routeSiteFrame");
+      if (iframe && iframe.contentWindow) {
+        try {
+          iframe.contentWindow.postMessage(
+            { type: "orienta-live-pdr-trajectory", path: m.path, position: m.position },
+            location.origin
+          );
+        } catch (e) {}
+      }
+    }
+    if (m.type === "pax_trajectory_clear" && m.passengerId === passengerId) {
+      const iframe = document.getElementById("routeSiteFrame");
+      if (iframe && iframe.contentWindow) {
+        try {
+          iframe.contentWindow.postMessage({ type: "orienta-live-pdr-clear" }, location.origin);
+        } catch (e) {}
+      }
+    }
   };
 }
 
