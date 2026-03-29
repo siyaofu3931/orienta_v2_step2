@@ -1,21 +1,26 @@
 /**
  * Video page: phone IMU → PDR Python backend → map trajectory.
- * Does not use PATH_LONLAT. Anchor is required via URL (boarding gate / start WGS84):
- *   ?pdrOriginLat=…&pdrOriginLng=…   (aliases: ?pdrLat= & ?pdrLng=)
- * Same-origin: /pdr-api (proxied). Override: ?pdrBackend=https://…
- * Optional: ?pdrMapMatch=1 — backend corridor map-matching.
+ * Anchor WGS84: optional ?pdrOriginLat/Lng. If omitted on PEK, origin = gateFrom/from/origin lat/lng from PEK_landmarks.csv (e.g. E16→E19 uses E16’s row only for PDR start).
+ * Parent /pax forwards pdrOrigin* into the iframe. Same-origin: /pdr-api. ?pdrBackend= override.
+ * Optional: ?pdrMapMatch=1 — corridor map-matching on backend.
  */
 (function () {
   var R_EARTH = 6378137;
 
-  /** WGS84 [lng, lat] from query, or null */
-  function pdrOriginFromQuery() {
+  /** WGS84 [lng, lat]: explicit query, then window.orientaPdrResolveAnchor (PEK gate → landmark). */
+  function resolvePdrAnchor() {
     try {
       var sp = new URLSearchParams(location.search);
       var lat = parseFloat(sp.get("pdrOriginLat") || sp.get("pdrLat") || "");
       var lng = parseFloat(sp.get("pdrOriginLng") || sp.get("pdrLng") || "");
       if (isFinite(lat) && isFinite(lng)) return [lng, lat];
     } catch (e) {}
+    if (typeof window.orientaPdrResolveAnchor === "function") {
+      try {
+        var o = window.orientaPdrResolveAnchor();
+        if (o && isFinite(o[0]) && isFinite(o[1])) return o;
+      } catch (e2) {}
+    }
     return null;
   }
 
@@ -209,9 +214,11 @@
 
   async function startPdr() {
     if (st.active) return;
-    var anchor = pdrOriginFromQuery();
+    var anchor = resolvePdrAnchor();
     if (!anchor) {
-      setStatus("请加 ?pdrOriginLat & ?pdrOriginLng（起点 WGS84）");
+      setStatus(
+        "无 PDR 起点：PEK 请带 airport=PEK 与 gateFrom（起点经纬度取自 PEK_landmarks.csv 该登机口）；或其它机场在 URL 写明 ?pdrOriginLat=纬度&pdrOriginLng=经度"
+      );
       return;
     }
     try {

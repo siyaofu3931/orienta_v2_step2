@@ -531,7 +531,7 @@
               <option value="2">2.0x</option>
             </select>
             <input class="timeline yt-progress" id="timeline" type="range" min="0" max="1000" value="0" step="1"/>
-            <button type="button" class="yt-icon-btn" id="btnPdrImu" title="PDR：需 HTTPS；URL 加 ?pdrOriginLat=&amp;pdrOriginLng= 登机口起点">PDR</button>
+            <button type="button" class="yt-icon-btn" id="btnPdrImu" title="PDR（HTTPS）：PEK 可从 gateFrom 取登机口坐标；或 ?pdrOriginLat=&amp;pdrOriginLng=">PDR</button>
             <span class="yt-time" id="pdrImuStatus" style="max-width:min(52vw,220px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left"></span>
           </div>
         </section>
@@ -2429,6 +2429,24 @@ function loop(){
   if (pageIndex === 0) drawPeoplePage();
   else drawLuggagePage();
 }
+/** PDR anchor: URL lat/lng if present; else PEK + gateFrom/from/origin → that gate’s lat/lon in PEK_landmarks.csv (orienta-pdr-client.js). */
+window.orientaPdrResolveAnchor = function () {
+  try {
+    var sp = new URLSearchParams(location.search);
+    var lat = parseFloat(sp.get('pdrOriginLat') || sp.get('pdrLat') || '');
+    var lng = parseFloat(sp.get('pdrOriginLng') || sp.get('pdrLng') || '');
+    if (isFinite(lat) && isFinite(lng)) return [lng, lat];
+    if (window.__ROUTESITE_HUB__ !== 'PEK') return null;
+    var g = orientaNormalizeGate_(sp.get('gateFrom') || sp.get('from') || sp.get('origin') || '');
+    if (!g) return null;
+    var lm = orientaLoadPekLandmarksRowsSync_();
+    if (!lm || !lm.length) return null;
+    for (var i = 0; i < lm.length; i++) {
+      if (lm[i].gate === g) return [lm[i].lng, lm[i].lat];
+    }
+  } catch (e) {}
+  return null;
+};
 imgP.onload = () => { imgL.onload = () => { requestAnimationFrame(loop); }; };
 </script>
 <script src="orienta-pdr-client.js"></script>

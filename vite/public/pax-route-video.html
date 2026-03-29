@@ -85,6 +85,15 @@
             "&to=" +
             encodeURIComponent(toGateRaw);
         }
+        const pdrLat = sp.get("pdrOriginLat") || sp.get("pdrLat");
+        const pdrLng = sp.get("pdrOriginLng") || sp.get("pdrLng");
+        if (pdrLat && pdrLng) {
+          frameSrc +=
+            "&pdrOriginLat=" +
+            encodeURIComponent(pdrLat) +
+            "&pdrOriginLng=" +
+            encodeURIComponent(pdrLng);
+        }
         frame.src = frameSrc;
       }
       const hint = document.getElementById("routeHint");
