@@ -16,7 +16,7 @@ services:
       # Public Release asset — set here so builds get it even if Dashboard env is wrong/outdated.
       - key: PEK_VIDEO_URL
         value: https://github.com/siyaofu3931/orienta_v2_step2/releases/download/pek-video-1/pek_videoroute_E.MP4
-      # Public URL of orienta-pdr service so /pdr-api on this host proxies to Python PDR (video page IMU).
+      # orienta-pdr service root only, e.g. https://orienta-pdr.onrender.com (no /api suffix).
       - key: PDR_API_ORIGIN
         sync: false
 

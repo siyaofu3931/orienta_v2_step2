@@ -24,10 +24,17 @@
     return null;
   }
 
+  /** Absolute PDR base must be service root (https://host), not …/api — session URL is root + "/api/session". */
+  function normalizePdrBackendParam(b) {
+    var s = String(b || "").trim().replace(/\/+$/, "");
+    if (/^https?:\/\//i.test(s) && /\/api$/i.test(s)) s = s.replace(/\/api$/i, "").replace(/\/+$/, "");
+    return s;
+  }
+
   function apiRoot() {
     try {
       var b = new URLSearchParams(location.search).get("pdrBackend");
-      if (b && String(b).trim()) return String(b).trim().replace(/\/$/, "");
+      if (b && String(b).trim()) return normalizePdrBackendParam(b);
     } catch (e) {}
     return "/pdr-api";
   }
@@ -239,12 +246,38 @@
     var root = apiRoot();
     var sessionUrl = root + "/api/session";
     setStatus("连接 PDR…");
-    var res = await fetch(sessionUrl, { method: "POST", headers: { Accept: "application/json" } });
-    if (!res.ok) {
-      setStatus("创建会话失败 " + res.status);
+    var res;
+    try {
+      res = await fetch(sessionUrl, { method: "POST", headers: { Accept: "application/json" } });
+    } catch (err) {
+      setStatus("无法连接 PDR 服务 · 检查网络或后端是否已启动");
       return;
     }
-    var data = await res.json();
+    if (!res.ok) {
+      var hint = "";
+      try {
+        var ct = (res.headers.get("content-type") || "").toLowerCase();
+        if (ct.indexOf("application/json") !== -1) {
+          var ej = await res.json();
+          if (ej && ej.message) hint = " · " + String(ej.message);
+          else if (ej && ej.error) hint = " · " + String(ej.error);
+        }
+      } catch (e1) {}
+      if (!hint && res.status === 502)
+        hint = " · 上游 PDR 无响应（本地请启动 Python PDR 并监听 10000）";
+      if (!hint && res.status === 404)
+        hint =
+          " · 常见原因：① 生产环境未设置 PDR_API_ORIGIN 或需重新部署 orienta；② PDR_API_ORIGIN / ?pdrBackend= 写成了 …/api（应写服务根 URL，如 https://orienta-pdr.onrender.com）；③ orienta-pdr 服务未启动";
+      setStatus("创建会话失败 " + res.status + hint);
+      return;
+    }
+    var data;
+    try {
+      data = await res.json();
+    } catch (e2) {
+      setStatus("PDR 返回非 JSON（请确认 /pdr-api 已指向 orienta-pdr，而非站点首页）");
+      return;
+    }
     var sid = data.session_id;
     if (!sid) {
       setStatus("无 session_id");
