@@ -27,6 +27,10 @@ Render: set environment variable **PEK_VIDEO_URL** to that exact URL (Dashboard 
 web service → Environment). The build runs **scripts/render-build.sh**, which downloads
 the file before `vite build`.
 
+**Render “Root Directory”** must be the **repository root** (leave blank / `.`), not
+`vite`. If Root Directory is `vite`, `bash scripts/render-build.sh` never runs from the
+right place and the MP4 is never downloaded — you get a 404 for `/route_site/pek_videoroute_E.MP4`.
+
 Note: on a **public** repo, anyone can download this asset. **Private** repos need an
 authenticated URL/token for curl—prefer a public release for simplicity, or use R2/S3 later.
 

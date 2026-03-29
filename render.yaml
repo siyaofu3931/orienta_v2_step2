@@ -13,7 +13,6 @@ services:
         value: 20
       - key: PORT
         generateValue: true
-      # GitHub Release asset URL, e.g. https://github.com/OWNER/REPO/releases/download/TAG/pek_videoroute_E.MP4
-      # See vite/public/route_site/README.txt
+      # Public Release asset — set here so builds get it even if Dashboard env is wrong/outdated.
       - key: PEK_VIDEO_URL
-        sync: false
+        value: https://github.com/siyaofu3931/orienta_v2_step2/releases/download/pek-video-1/pek_videoroute_E.MP4

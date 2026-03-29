@@ -28,6 +28,10 @@ app.use(
 // SPA fallback: serve index.html only for non-API routes (never for /api/*)
 app.get("*", (req, res) => {
   if (req.path.startsWith("/api")) return res.status(404).json({ error: "not_found", path: req.path });
+  // Missing static files must not return HTML (breaks <video> and confuses debugging)
+  if (/\.(mp4|webm|m4v|mov|csv|png|jpg|jpeg|gif|svg|ico|woff2?)$/i.test(req.path)) {
+    return res.status(404).type("text/plain").send("Not found");
+  }
   res.sendFile(path.join(distDir, "index.html"));
 });
 

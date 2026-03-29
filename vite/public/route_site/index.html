@@ -603,11 +603,11 @@ function orientaLoadPekRowsSync_() {
   if (window.__ROUTESITE_HUB__ !== 'PEK') return null;
   var v = document.getElementById('vid');
   if (v) {
-    v.src = 'pek_videoroute_E.MP4?t=' + Date.now();
+    v.src = '/route_site/pek_videoroute_E.MP4?t=' + Date.now();
     v.addEventListener('error', function pekVidErr() {
       if (v.dataset.orientaPekFallback === '1') return;
       v.dataset.orientaPekFallback = '1';
-      v.src = 'pek_videoroute_E.mp4?t=' + Date.now();
+      v.src = '/route_site/pek_videoroute_E.mp4?t=' + Date.now();
     });
   }
   var b = document.getElementById('badgeVideo');
@@ -764,7 +764,7 @@ var PATH_LONLAT_PEK = orientaBuildPekPathLonLatFromLandmarks_() || PATH_LONLAT_P
       d.className = 'orienta-video-missing';
       d.setAttribute('role', 'alert');
       d.style.cssText = 'position:absolute;left:0;right:0;top:0;bottom:0;display:flex;align-items:center;justify-content:center;padding:20px;text-align:center;background:rgba(15,15,18,0.92);color:#f5f5f7;font:15px/1.5 -apple-system,system-ui,sans-serif;z-index:40;';
-      d.innerHTML = '无法加载视频（404、路径大小写或编码不支持）。<br/><br/>请将文件放在 <b>vite/public/route_site/</b>：<br/>' + fname;
+      d.innerHTML = '无法加载视频（404、路径大小写或编码不支持）。<br/><br/>本地：请将文件放在 <b>vite/public/route_site/</b>：<br/>' + fname + '<br/><br/>Render：设置 <b>PEK_VIDEO_URL</b>（GitHub Release 直链），且服务 <b>Root Directory</b> 留空为仓库根目录，以便运行 <b>scripts/render-build.sh</b> 在构建时下载。';
       wrap.appendChild(d);
     }, 2000);
   }
