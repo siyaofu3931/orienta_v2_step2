@@ -5,4 +5,8 @@ dist/
 *.log
 .DS_Store
 
-# PEK video is tracked with Git LFS (see .gitattributes). Install: git lfs install
+# PEK route video (~200MB): keep out of Git to avoid GitHub 100MB limit and Git LFS quota.
+# On Render, set PEK_VIDEO_URL to a direct download URL; scripts/render-build.sh fetches it before build.
+vite/public/route_site/pek_videoroute_E.MP4
+vite/public/route_site/pek_videoroute_E.mp4
+vite/public/route_site/pek_videoroute_E.MP4.backup_before_10mb

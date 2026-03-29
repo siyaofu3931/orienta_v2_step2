@@ -5,7 +5,7 @@ services:
     region: oregon
     plan: free
 
-    buildCommand: cd vite && npm ci && npm run build
+    buildCommand: bash scripts/render-build.sh
     startCommand: cd vite && npm run start
 
     envVars:
@@ -13,3 +13,7 @@ services:
         value: 20
       - key: PORT
         generateValue: true
+      # GitHub Release asset URL, e.g. https://github.com/OWNER/REPO/releases/download/TAG/pek_videoroute_E.MP4
+      # See vite/public/route_site/README.txt
+      - key: PEK_VIDEO_URL
+        sync: false

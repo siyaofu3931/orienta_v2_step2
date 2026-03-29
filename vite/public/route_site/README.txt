@@ -3,24 +3,39 @@ PEK indoor route video
 
 File: pek_videoroute_E.MP4  (fallback: pek_videoroute_E.mp4 on case-sensitive disks)
 
-This file is tracked with Git LFS so it can live on GitHub (normal Git rejects files > 100 MB).
+This file is not stored in Git (avoids GitHub’s 100 MB blob limit and Git LFS quota on
+hosts like Render that meter LFS).
 
-Clone / pull on a new machine
-------------------------------
-  git lfs install
-  git clone <repo-url>
-  # LFS files download automatically on checkout with recent Git; if missing:
-  git lfs pull
+Hosting via GitHub Releases (current)
+---------------------------------------
+Use a public repo so the asset URL works without a token (Render’s build only runs curl).
 
-GitHub LFS quota
-----------------
-Free GitHub accounts include 1 GiB of LFS storage and 1 GiB/month bandwidth.
-This video is ~1.7 GiB — you may need a paid "Git LFS Data" pack for the push
-to succeed, or use a GitHub Team/Enterprise plan with higher limits.
+1. On GitHub: open your repo → Releases → “Draft a new release”.
+2. Choose a tag (e.g. `pek-video-1` or `v0.1.0-pek`). Create the tag if it does not exist.
+3. Title/description optional. Attach **pek_videoroute_E.MP4** under “Attach binaries”.
+4. Publish the release.
 
-See: https://docs.github.com/en/repositories/working-with-files/managing-large-files/about-git-large-file-storage
+Direct download URL format (copy from the release asset link, or build it yourself):
 
-Alternative without LFS billing
--------------------------------
-Upload the .MP4 as a Release asset (up to 2 GB per file on many plans), then
-download it into this folder for local dev / deploy.
+  https://github.com/OWNER/REPO/releases/download/TAG/pek_videoroute_E.MP4
+
+Example:
+
+  https://github.com/myorg/orienta/releases/download/pek-video-1/pek_videoroute_E.MP4
+
+Render: set environment variable **PEK_VIDEO_URL** to that exact URL (Dashboard → your
+web service → Environment). The build runs **scripts/render-build.sh**, which downloads
+the file before `vite build`.
+
+Note: on a **public** repo, anyone can download this asset. **Private** repos need an
+authenticated URL/token for curl—prefer a public release for simplicity, or use R2/S3 later.
+
+Local development
+-----------------
+Place your own copy of the MP4 in this folder, or download once:
+
+  curl -fL -o pek_videoroute_E.MP4 "https://github.com/OWNER/REPO/releases/download/TAG/pek_videoroute_E.MP4"
+
+Other hosts (optional)
+----------------------
+Cloudflare R2, S3, etc. still work with PEK_VIDEO_URL if you switch later.
