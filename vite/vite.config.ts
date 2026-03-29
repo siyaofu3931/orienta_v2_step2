@@ -36,6 +36,14 @@ export default defineConfig(({ mode }) => {
       host: true,
       strictPort: true,
       allowedHosts: [".trycloudflare.com"],
+      proxy: {
+        "/pdr-api": {
+          target: "http://127.0.0.1:10000",
+          changeOrigin: true,
+          ws: true,
+          rewrite: (p) => p.replace(/^\/pdr-api/, ""),
+        },
+      },
     },
   };
 });

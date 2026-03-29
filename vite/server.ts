@@ -6,6 +6,7 @@ import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express";
+import { createProxyMiddleware } from "http-proxy-middleware";
 import { attachWsHub } from "./wsHub";
 import { registerApiRoutes } from "./apiRoutes";
 
@@ -17,6 +18,22 @@ app.use(express.json());
 
 // API routes (flight, airport, gate) — must be before static
 registerApiRoutes(app);
+
+const pdrOrigin = process.env.PDR_API_ORIGIN?.trim();
+const pdrProxy =
+  pdrOrigin &&
+  createProxyMiddleware({
+    target: pdrOrigin,
+    changeOrigin: true,
+    ws: true,
+    pathRewrite: { "^/pdr-api": "" },
+  });
+if (pdrProxy) {
+  app.use("/pdr-api", pdrProxy);
+  console.log("PDR API proxy: /pdr-api ->", pdrOrigin);
+} else {
+  console.log("PDR API proxy: disabled (set PDR_API_ORIGIN to enable /pdr-api on this host)");
+}
 
 app.use(
   express.static(distDir, {
@@ -36,6 +53,22 @@ app.get("*", (req, res) => {
 });
 
 const server = http.createServer(app);
+if (pdrProxy) {
+  server.on("upgrade", (req, socket, head) => {
+    try {
+      const pathname = new URL(req.url || "", "http://localhost").pathname;
+      if (pathname.startsWith("/pdr-api")) {
+        (pdrProxy as { upgrade?: (r: typeof req, s: typeof socket, h: typeof head) => void }).upgrade?.(
+          req,
+          socket,
+          head
+        );
+      }
+    } catch {
+      /* ignore */
+    }
+  });
+}
 attachWsHub(server);
 
 const PORT = Number(process.env.PORT) || 5174;

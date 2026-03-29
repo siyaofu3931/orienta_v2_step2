@@ -522,6 +522,8 @@
               <option value="2">2.0x</option>
             </select>
             <input class="timeline yt-progress" id="timeline" type="range" min="0" max="1000" value="0" step="1"/>
+            <button type="button" class="yt-icon-btn" id="btnPdrImu" title="使用手机 IMU 显示室内轨迹（需 HTTPS）">PDR</button>
+            <span class="yt-time" id="pdrImuStatus" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
           </div>
         </section>
         <div class="amenities-video-overlay" id="amenitiesVideoOverlay">
@@ -2233,6 +2235,12 @@ function drawPeoplePage(){
   var mapSplit = (PATH_LONLAT && PATH_LONLAT.length >= 2)
     ? orientaMapSplitFromPathProgress_(PATH_LONLAT, rawRatio, DOT_START_OFFSET, DOT_END_OFFSET)
     : null;
+  if (window.__ORIENTA_PDR__ && window.__ORIENTA_PDR__.active && typeof window.__ORIENTA_PDR__.buildMapSplit === 'function') {
+    try {
+      var _pdrSplit = window.__ORIENTA_PDR__.buildMapSplit();
+      if (_pdrSplit) mapSplit = _pdrSplit;
+    } catch (_pdrE) {}
+  }
 
   if (ctxP) {
     ctxP.setTransform(1,0,0,1,0,0);
@@ -2315,7 +2323,9 @@ function drawPeoplePage(){
     var cNext = (mapSplit.tt < 1 - 1e-6) ? mapSplit.b : (PATH_LONLAT[Math.min(mapSplit.si + 2, mapSplit.n - 1)] || mapSplit.b);
     var dx = cNext[0] - coord[0];
     var dy = cNext[1] - coord[1];
-    const heading = Math.atan2(-dy, dx);
+    var heading = (mapSplit._pdrHeadingRad != null && isFinite(mapSplit._pdrHeadingRad))
+      ? mapSplit._pdrHeadingRad
+      : Math.atan2(-dy, dx);
     peoplePointFeature.set('arrowRotation', heading);
     peoplePointFeature.changed();
   }
@@ -2412,5 +2422,6 @@ function loop(){
 }
 imgP.onload = () => { imgL.onload = () => { requestAnimationFrame(loop); }; };
 </script>
+<script src="orienta-pdr-client.js"></script>
 </body>
 </html>
