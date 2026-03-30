@@ -238,6 +238,15 @@ function buildRouteSiteIframeSrc() {
   if (autoGate === "1") {
     src += "&autoGate=1";
   }
+  const pdrLat = params.get("pdrOriginLat") || params.get("pdrLat");
+  const pdrLng = params.get("pdrOriginLng") || params.get("pdrLng");
+  if (pdrLat && pdrLng) {
+    src +=
+      "&pdrOriginLat=" +
+      encodeURIComponent(pdrLat) +
+      "&pdrOriginLng=" +
+      encodeURIComponent(pdrLng);
+  }
   return src;
 }
 

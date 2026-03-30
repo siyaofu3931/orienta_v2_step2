@@ -1,0 +1,19 @@
+{
+  "name": "airport_corridor_graph_example",
+  "unit": "meter",
+  "origin_note": "Use the same local XY frame as backend PDR output (x east, y north).",
+  "edges": [
+    {
+      "id": "C12-C15",
+      "points": [[0.0, 0.0], [18.0, 24.0], [36.0, 48.0]]
+    },
+    {
+      "id": "C15-C18",
+      "points": [[36.0, 48.0], [44.0, 60.0], [52.0, 72.0]]
+    },
+    {
+      "id": "C15-C19",
+      "points": [[36.0, 48.0], [46.0, 48.0], [56.0, 48.0]]
+    }
+  ]
+}

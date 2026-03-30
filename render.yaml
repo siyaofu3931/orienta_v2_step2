@@ -16,3 +16,22 @@ services:
       # Public Release asset — set here so builds get it even if Dashboard env is wrong/outdated.
       - key: PEK_VIDEO_URL
         value: https://github.com/siyaofu3931/orienta_v2_step2/releases/download/pek-video-1/pek_videoroute_E.MP4
+      # orienta-pdr service root only, e.g. https://orienta-pdr.onrender.com (no /api suffix).
+      - key: PDR_API_ORIGIN
+        sync: false
+
+  # PDR_AIRCHINA backend + algorithm (Python), same repo as orienta
+  - type: web
+    name: orienta-pdr
+    runtime: python
+    region: oregon
+    plan: free
+    rootDir: pdr_airchina
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: python3 run.py
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.8"
+      - key: PORT
+        generateValue: true

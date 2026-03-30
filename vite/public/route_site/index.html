@@ -397,6 +397,15 @@
     align-items:center;
     justify-content:center;
   }
+  /* PDR: cyan = WebSocket OK; green = devicemotion events received */
+  #btnPdrImu.orienta-pdr-connected{
+    border-color: rgba(34, 211, 238, 0.55);
+    box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.25);
+  }
+  #btnPdrImu.orienta-pdr-imu-live{
+    background: rgba(0, 200, 83, 0.22);
+    border-color: var(--brand);
+  }
   .yt-time{
     font-size:12px;
     color:#ececec;
@@ -522,6 +531,8 @@
               <option value="2">2.0x</option>
             </select>
             <input class="timeline yt-progress" id="timeline" type="range" min="0" max="1000" value="0" step="1"/>
+            <button type="button" class="yt-icon-btn" id="btnPdrImu" title="PDR（HTTPS）：PEK 可从 gateFrom 取登机口坐标；或 ?pdrOriginLat=&amp;pdrOriginLng=">PDR</button>
+            <span class="yt-time" id="pdrImuStatus" style="max-width:min(52vw,220px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left"></span>
           </div>
         </section>
         <div class="amenities-video-overlay" id="amenitiesVideoOverlay">
@@ -2233,6 +2244,12 @@ function drawPeoplePage(){
   var mapSplit = (PATH_LONLAT && PATH_LONLAT.length >= 2)
     ? orientaMapSplitFromPathProgress_(PATH_LONLAT, rawRatio, DOT_START_OFFSET, DOT_END_OFFSET)
     : null;
+  if (window.__ORIENTA_PDR__ && window.__ORIENTA_PDR__.active && typeof window.__ORIENTA_PDR__.buildMapSplit === 'function') {
+    try {
+      var _pdrSplit = window.__ORIENTA_PDR__.buildMapSplit();
+      if (_pdrSplit) mapSplit = _pdrSplit;
+    } catch (_pdrE) {}
+  }
 
   if (ctxP) {
     ctxP.setTransform(1,0,0,1,0,0);
@@ -2315,7 +2332,9 @@ function drawPeoplePage(){
     var cNext = (mapSplit.tt < 1 - 1e-6) ? mapSplit.b : (PATH_LONLAT[Math.min(mapSplit.si + 2, mapSplit.n - 1)] || mapSplit.b);
     var dx = cNext[0] - coord[0];
     var dy = cNext[1] - coord[1];
-    const heading = Math.atan2(-dy, dx);
+    var heading = (mapSplit._pdrHeadingRad != null && isFinite(mapSplit._pdrHeadingRad))
+      ? mapSplit._pdrHeadingRad
+      : Math.atan2(-dy, dx);
     peoplePointFeature.set('arrowRotation', heading);
     peoplePointFeature.changed();
   }
@@ -2410,7 +2429,26 @@ function loop(){
   if (pageIndex === 0) drawPeoplePage();
   else drawLuggagePage();
 }
+/** PDR anchor: URL lat/lng if present; else PEK + gateFrom/from/origin → that gate’s lat/lon in PEK_landmarks.csv (orienta-pdr-client.js). */
+window.orientaPdrResolveAnchor = function () {
+  try {
+    var sp = new URLSearchParams(location.search);
+    var lat = parseFloat(sp.get('pdrOriginLat') || sp.get('pdrLat') || '');
+    var lng = parseFloat(sp.get('pdrOriginLng') || sp.get('pdrLng') || '');
+    if (isFinite(lat) && isFinite(lng)) return [lng, lat];
+    if (window.__ROUTESITE_HUB__ !== 'PEK') return null;
+    var g = orientaNormalizeGate_(sp.get('gateFrom') || sp.get('from') || sp.get('origin') || '');
+    if (!g) return null;
+    var lm = orientaLoadPekLandmarksRowsSync_();
+    if (!lm || !lm.length) return null;
+    for (var i = 0; i < lm.length; i++) {
+      if (lm[i].gate === g) return [lm[i].lng, lm[i].lat];
+    }
+  } catch (e) {}
+  return null;
+};
 imgP.onload = () => { imgL.onload = () => { requestAnimationFrame(loop); }; };
 </script>
+<script src="orienta-pdr-client.js"></script>
 </body>
 </html>

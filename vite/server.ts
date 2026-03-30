@@ -6,6 +6,7 @@ import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express";
+import { createProxyMiddleware } from "http-proxy-middleware";
 import { attachWsHub } from "./wsHub";
 import { registerApiRoutes } from "./apiRoutes";
 
@@ -17,6 +18,40 @@ app.use(express.json());
 
 // API routes (flight, airport, gate) — must be before static
 registerApiRoutes(app);
+
+/** PDR_API_ORIGIN must be the Python service root (e.g. https://orienta-pdr.onrender.com), not …/api — or proxy becomes /api/api/session → 404. */
+function normalizePdrApiOrigin(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  let u = raw.trim().replace(/\/+$/, "");
+  if (/\/api$/i.test(u)) {
+    u = u.replace(/\/api$/i, "").replace(/\/+$/, "");
+    console.warn("PDR_API_ORIGIN had a trailing /api; use the service root only. Normalized to:", u);
+  }
+  return u || undefined;
+}
+
+const pdrOrigin = normalizePdrApiOrigin(process.env.PDR_API_ORIGIN);
+const pdrProxy =
+  pdrOrigin &&
+  createProxyMiddleware({
+    target: pdrOrigin,
+    changeOrigin: true,
+    ws: true,
+    pathRewrite: { "^/pdr-api": "" },
+  });
+if (pdrProxy) {
+  app.use("/pdr-api", pdrProxy);
+  console.log("PDR API proxy: /pdr-api ->", pdrOrigin);
+} else {
+  app.use("/pdr-api", (_req, res) => {
+    res.status(503).json({
+      error: "pdr_proxy_disabled",
+      message:
+        "未配置 PDR：在 orienta 进程上设置环境变量 PDR_API_ORIGIN 为 orienta-pdr 服务的公网根 URL（无尾部斜杠）。本地开发：在 pdr_airchina 启动 uvicorn 监听 10000，并用 vite dev（会代理 /pdr-api）。",
+    });
+  });
+  console.log("PDR API proxy: disabled (set PDR_API_ORIGIN to enable /pdr-api on this host)");
+}
 
 app.use(
   express.static(distDir, {
@@ -36,6 +71,22 @@ app.get("*", (req, res) => {
 });
 
 const server = http.createServer(app);
+if (pdrProxy) {
+  server.on("upgrade", (req, socket, head) => {
+    try {
+      const pathname = new URL(req.url || "", "http://localhost").pathname;
+      if (pathname.startsWith("/pdr-api")) {
+        (pdrProxy as { upgrade?: (r: typeof req, s: typeof socket, h: typeof head) => void }).upgrade?.(
+          req,
+          socket,
+          head
+        );
+      }
+    } catch {
+      /* ignore */
+    }
+  });
+}
 attachWsHub(server);
 
 const PORT = Number(process.env.PORT) || 5174;

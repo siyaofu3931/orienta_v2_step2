@@ -10,3 +10,8 @@ dist/
 vite/public/route_site/pek_videoroute_E.MP4
 vite/public/route_site/pek_videoroute_E.mp4
 vite/public/route_site/pek_videoroute_E.MP4.backup_before_10mb
+
+# Python (PDR backend)
+pdr_airchina/**/__pycache__/
+pdr_airchina/**/*.pyc
+pdr_airchina/.venv/
