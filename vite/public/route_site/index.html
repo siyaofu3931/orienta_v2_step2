@@ -756,8 +756,17 @@ var PATH_LONLAT_PEK = orientaBuildPekPathLonLatFromLandmarks_() || PATH_LONLAT_P
   var v = document.getElementById('vid');
   if (!v) return;
   var missingTimer = null;
+  function clearMissingOverlay() {
+    var wrap = document.getElementById('videoWrap');
+    if (!wrap) return;
+    var d = wrap.querySelector('.orienta-video-missing');
+    if (d && d.parentNode) d.parentNode.removeChild(d);
+    v.removeAttribute('data-orienta-shown-missing');
+  }
   function clearMissingTimer() {
     if (missingTimer) { clearTimeout(missingTimer); missingTimer = null; }
+    // If media became playable again, clear stale overlay from previous transient errors.
+    if (v.readyState >= 2 && !v.error) clearMissingOverlay();
   }
   function scheduleMissingOverlay() {
     clearMissingTimer();
@@ -777,11 +786,12 @@ var PATH_LONLAT_PEK = orientaBuildPekPathLonLatFromLandmarks_() || PATH_LONLAT_P
       d.style.cssText = 'position:absolute;left:0;right:0;top:0;bottom:0;display:flex;align-items:center;justify-content:center;padding:20px;text-align:center;background:rgba(15,15,18,0.92);color:#f5f5f7;font:15px/1.5 -apple-system,system-ui,sans-serif;z-index:40;';
       d.innerHTML = '无法加载视频（404、路径大小写或编码不支持）。<br/><br/>本地：请将文件放在 <b>vite/public/route_site/</b>：<br/>' + fname + '<br/><br/>Render：设置 <b>PEK_VIDEO_URL</b>（GitHub Release 直链），且服务 <b>Root Directory</b> 留空为仓库根目录，以便运行 <b>scripts/render-build.sh</b> 在构建时下载。';
       wrap.appendChild(d);
-    }, 2000);
+    }, 3500);
   }
   v.addEventListener('error', scheduleMissingOverlay);
   v.addEventListener('loadeddata', clearMissingTimer);
   v.addEventListener('canplay', clearMissingTimer);
+  v.addEventListener('playing', clearMissingTimer);
 })();
 function buildGateToSegmentTimeMap() {
   var m = {};

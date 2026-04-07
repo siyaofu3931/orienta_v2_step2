@@ -8,6 +8,7 @@ import * as jose from "jose";
 import { readFileSync, existsSync } from "node:fs";
 import { resolveCanonicalPassengerId } from "./src/services/passengerAliases";
 import { pushRouteSiteTouristPosition, clearRouteSiteTouristPosition } from "./wsHub";
+import webpush from "web-push";
 
 function corsTouristApi(res: Response) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -17,6 +18,47 @@ function corsTouristApi(res: Response) {
 
 function defaultRouteSiteTenant(): string {
   return process.env.ROUTE_SITE_DEFAULT_TENANT || "airchina";
+}
+
+type PushSub = { endpoint: string; expirationTime?: number | null; keys?: { p256dh?: string; auth?: string } };
+const pushSubs = new Map<string, PushSub[]>(); // key: tenant::pid
+const awayTokens = new Map<string, string>();
+
+function paxKey(tenantId: string, passengerId: string) {
+  return `${tenantId}::${passengerId}`;
+}
+
+function getVapid() {
+  const publicKey = (process.env.VAPID_PUBLIC_KEY || "").trim();
+  const privateKey = (process.env.VAPID_PRIVATE_KEY || "").trim();
+  const subject = (process.env.VAPID_SUBJECT || "mailto:ops@orienta.ai").trim();
+  if (!publicKey || !privateKey) return null;
+  webpush.setVapidDetails(subject, publicKey, privateKey);
+  return { publicKey };
+}
+
+async function sendAwayPush(tenantId: string, passengerId: string) {
+  const vapid = getVapid();
+  if (!vapid) return;
+  const key = paxKey(tenantId, passengerId);
+  const subs = pushSubs.get(key) || [];
+  if (!subs.length) return;
+  const payload = JSON.stringify({
+    title: "Orienta 提醒",
+    body: "你已离开页面超过 30 秒，请返回继续查看视频页。",
+    url: `/pax.html?tenant=${encodeURIComponent(tenantId)}&pid=${encodeURIComponent(passengerId)}&view=video`,
+  });
+  const keep: PushSub[] = [];
+  for (const sub of subs) {
+    try {
+      await webpush.sendNotification(sub as any, payload);
+      keep.push(sub);
+    } catch (e: any) {
+      const code = e?.statusCode || e?.status || 0;
+      if (code !== 404 && code !== 410) keep.push(sub);
+    }
+  }
+  pushSubs.set(key, keep);
 }
 
 // Static airport centers (PEK T3E, SFO)
@@ -177,6 +219,52 @@ async function makeMapKitToken(origin: string): Promise<string> {
 }
 
 export function registerApiRoutes(app: import("express").Application) {
+  app.get("/api/push/vapidPublicKey", (_req, res) => {
+    const vapid = getVapid();
+    if (!vapid) return res.status(503).json({ ok: false, error: "push_not_configured" });
+    return res.json({ ok: true, publicKey: vapid.publicKey });
+  });
+
+  app.post("/api/push/subscribe", (req, res) => {
+    const body = req.body || {};
+    const tenantId = String(body.tenantId || body.tenant_id || defaultRouteSiteTenant()).trim() || defaultRouteSiteTenant();
+    const passengerId = resolveCanonicalPassengerId(String(body.passengerId || body.passenger_id || "").trim());
+    const subscription = body.subscription as PushSub | undefined;
+    if (!passengerId) return res.status(400).json({ ok: false, error: "missing_passenger_id" });
+    if (!subscription || !subscription.endpoint) return res.status(400).json({ ok: false, error: "missing_subscription" });
+    const key = paxKey(tenantId, passengerId);
+    const existing = pushSubs.get(key) || [];
+    const dedup = [subscription, ...existing].filter((s, idx, arr) => arr.findIndex((x) => x.endpoint === s.endpoint) === idx);
+    pushSubs.set(key, dedup);
+    return res.json({ ok: true });
+  });
+
+  app.post("/api/pax/away", (req, res) => {
+    const body = req.body || {};
+    const tenantId = String(body.tenantId || body.tenant_id || defaultRouteSiteTenant()).trim() || defaultRouteSiteTenant();
+    const passengerId = resolveCanonicalPassengerId(String(body.passengerId || body.passenger_id || "").trim());
+    if (!passengerId) return res.status(400).json({ ok: false, error: "missing_passenger_id" });
+    const awayMsRaw = Number(body.awayMs || 30000);
+    const awayMs = Number.isFinite(awayMsRaw) ? Math.max(5000, Math.min(120000, awayMsRaw)) : 30000;
+    const key = paxKey(tenantId, passengerId);
+    const token = `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    awayTokens.set(key, token);
+    setTimeout(() => {
+      if (awayTokens.get(key) !== token) return;
+      void sendAwayPush(tenantId, passengerId);
+    }, awayMs);
+    return res.json({ ok: true });
+  });
+
+  app.post("/api/pax/back", (req, res) => {
+    const body = req.body || {};
+    const tenantId = String(body.tenantId || body.tenant_id || defaultRouteSiteTenant()).trim() || defaultRouteSiteTenant();
+    const passengerId = resolveCanonicalPassengerId(String(body.passengerId || body.passenger_id || "").trim());
+    if (!passengerId) return res.status(400).json({ ok: false, error: "missing_passenger_id" });
+    awayTokens.delete(paxKey(tenantId, passengerId));
+    return res.json({ ok: true });
+  });
+
   // route_site → back office (5174): same payload shape as legacy Python service, plus tenant_id / passenger_id
   app.options("/api/tourist-position", (_req, res) => {
     corsTouristApi(res);

@@ -1,0 +1,16 @@
+{
+  "name": "Orienta Passenger",
+  "short_name": "Orienta",
+  "start_url": "/pax.html?pid=TX1",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7f8fb",
+  "theme_color": "#c8102e",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
